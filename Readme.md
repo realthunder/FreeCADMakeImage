@@ -4,7 +4,7 @@ This repository contains some helper scripts to locally build personalized
 [FreeCAD](https://github.com/FreeCAD/FreeCAD) release image, making it easy
 to release feature testing images.
 
-# AppImage
+# Linux AppImage
 
 The [mkimg](./mkimg.sh) script is to prepare and build a Debian package from
 a given FreeCAD git repository, and then build an [AppImage](https://appimage.org/) 
@@ -129,7 +129,7 @@ optional and has default value as shown in the bracket.
 * Windows related variables
     * FMK_LIBPACK_URL
       (https://github.com/sgrogan/FreeCAD/releases/download/0.17_py_2.17.14/FreeCADLibs_11.9_x64_VC12.7z),
-      url to download FreeCAD library pack for Windows.
+      URL to download FreeCAD library pack for Windows.
     * FMK_CMAKE_EXE (`/cygdrive/c/program files/*/bin/cmake.exe`), `cygwin`
       path to `cmake.exe`
 
@@ -139,7 +139,7 @@ Once you've configured all the variables, simply run
 ./mkimg.sh
 ```
 
-The script can also be ran remotely. It copy itself to the remote machine
+The script can also be ran remotely. It copies itself to the remote machine
 through ssh and then run from there. I use it to build on remote Windows
 machine from Linux. Assuming the remote machine has all the required software
 setup properly, run
