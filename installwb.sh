@@ -4,25 +4,39 @@
 
 set -ex
 
-img_date=`date -r ../freecad-daily*.deb +%Y%m%d%H%M`
+ref=../freecad-daily*.deb
+if test -f $ref; then
+    ref="-r $ref"
+else
+    ref=
+fi
+img_date=`date $ref +%Y%m%d%H%M`
 
 ver=
-if [ "${REPO_VER:=1}" = 1 ]; then
-    ver=$REPO_HASH
+if [ "${FMK_REPO_VER:=1}" = 1 ]; then
+    ver=$FMK_REPO_HASH
 fi
 
-base_path=${WB_BASE_PATH:=./usr/lib/freecad-daily}
+base_path=$FMK_WB_BASE_PATH
+if test -z $base_path; then
+    check_path=./usr/lib/freecad-daily
+    if test -d $check_path; then
+        base_path=$check_path
+    else
+        base_path=.
+    fi
+fi
 
-for wb in $WB_LIST; do
-    url=WB_URL_$wb
+for wb in $FMK_WB_LIST; do
+    url=FMK_WB_URL_$wb
     url=${!url}
     if test -z $url; then
         echo "no url for $wb"
         exit 1
     fi
-    branch=WB_BRANCH_$wb
+    branch=FMK_WB_BRANCH_$wb
     branch=${!branch:=master}
-    path=WB_PATH_$wb
+    path=FMK_WB_PATH_$wb
     path=$base_path/${!path:=Mod}
 
     pushd $path
@@ -34,13 +48,13 @@ for wb in $WB_LIST; do
         img_date=$date
     fi
 
-    sub=WB_SUB_$wb
+    sub=FMK_WB_SUB_$wb
     sub=${!sub}
     if test "$sub"; then
         git submodule update --depth 1 --init $sub
     fi
 
-    addver=WB_VER_$wb
+    addver=FMK_WB_VER_$wb
     if [ "${!addver:=1}" = 1 ]; then
         test -z $ver || ver=$ver-
         ver=$ver$(git show -s --format=%h)
@@ -48,4 +62,4 @@ for wb in $WB_LIST; do
     popd
 done
 
-echo "$IMG_NAME-${img_date:0:8}-$ver" > ${REPO_VER_PATH:=../VERSION}
+echo "$FMK_IMG_NAME-${img_date:0:8}-$ver" > ${FMK_REPO_VER_PATH:=../VERSION}

@@ -68,7 +68,24 @@ Update `pbuilder` source list
 pbuilder-dist trusty update --release-only
 ```
 
-## Script Usage
+# Windows
+
+The [mkimg](./mkimg.sh) script also supports building for Windows. You'll need
+to install the following software first.
+
+* [CMake](https://cmake.org/). The latest 3.10 version doesn't seem to work for
+  the current FreeCAD build, you can try early [version](https://cmake.org/files/v3.7/).
+* Visual studio 2013. Unfortunately, Microsoft seems to have completely retired
+  VS2013. I can't seem to find a working download link anywhere. Please notify
+  me if you can find one.
+* [cygwin](https://cygwin.com/install.html). It is only used in order to run
+  the scripts here. Make sure you select the following packages,
+    * p7zip
+    * git
+    * wget
+    * tar
+
+# Script Usage
 
 You can configure the [mkimg](./mkimg.sh) script with a list of environment
 variables. It will be easier to write a wrapper script together with the 
@@ -83,27 +100,53 @@ It's kind of annoying, but seems to be hard to
 The supported environment variables are listed as follow, most of which are
 optional and has default value as shown in the bracket.
 
-- **IMG_NAME** (`img`), name to be appeared in the file name of AppImage final
-  output. It is also used as the name for the local build directory.
-- **REPO_URL** (https://github.com/FreeCAD/FreeCAD), the git URL of your
+- **FMK_IMG_NAME** (`img`), name to be appeared in the file name of AppImage
+  final output. It is also used as the name for the local build directory.
+- **FMK_REPO_URL** (https://github.com/FreeCAD/FreeCAD), the git URL of your
   FreeCAD repo.
-- **REPO_BRANCH** (`master`), branch, tag, or commit of the git repo to checkout.
-- **REPO_VER** (`1`), set to 1 to include the git checkout hash to the file
+- **FMK_REPO_BRANCH** (`master`), branch, tag, or commit of the git repo to
+  checkout.
+- **FMK_REPO_VER** (`1`), set to 1 to include the git checkout hash to the file
   name of AppImage final output.
-- **DPKG_URL** (https://git.launchpad.net/~freecad-maintainers/+git/gitpackaging), 
-  the git URL of Debian package repo.
-- **DPKG_BRANCH** (dailybuild-occt), the git branch of the Debian package repo.
-- **AIMG_URL** (https://github.com/realthunder/AppImages.git), the git URL of
-  AppImage script repo.
-- **AIMG_BRANCH** (`master`), the git branch of the AppImage repo
-- **WB_LIST**, space delimited name list of personal workbenches to
+- **FMK_DPKG_URL**
+  (https://git.launchpad.net/~freecad-maintainers/+git/gitpackaging), the git
+  URL of Debian package repo.
+- **FMK_DPKG_BRANCH** (dailybuild-occt), the git branch of the Debian package
+  repo.
+- **FMK_AIMG_URL** (https://github.com/realthunder/AppImages.git), the git URL
+  of AppImage script repo.
+- **FMK_AIMG_BRANCH** (`master`), the git branch of the AppImage repo
+- **FMK_WB_LIST**, space delimited name list of personal workbenches to
   install. The name will also be used for the local installation directory.
-- **WB_URL_`<name>`**: the git URL of the workbench named `<name>`
-- **WB_BRANCH_`<name>`** (`master`) branch, tag, or commit of the workbench named
-  `<name>` to checkout
-- **WB_VER_`<name>`** (`1`), set to 1 to include the git checkout hash of the
-  workbench named `<name>` to the file name of AppImage final output.
-- **WB_PATH_`<name>`** (`Mod`), path relative to FreeCAD installation directory
-  to install the workbench named `<name>`
-- **WB_SUB_`<name>`**, a list of submodule names to checkout
+- **FMK_WB_URL_`<name>`**: the git URL of the workbench named `<name>`
+- **FMK_WB_BRANCH_`<name>`** (`master`) branch, tag, or commit of the workbench
+  named `<name>` to checkout
+- **FMK_WB_VER_`<name>`** (`1`), set to 1 to include the git checkout hash of
+  the workbench named `<name>` to the file name of AppImage final output.
+- **FMK_WB_PATH_`<name>`** (`Mod`), path relative to FreeCAD installation
+  directory to install the workbench named `<name>`
+- **FMK_WB_SUB_`<name>`**, a list of submodule names to checkout
+* Windows related variables
+    * FMK_LIBPACK_URL
+      (https://github.com/sgrogan/FreeCAD/releases/download/0.17_py_2.17.14/FreeCADLibs_11.9_x64_VC12.7z),
+      url to download FreeCAD library pack for Windows.
+    * FMK_CMAKE_EXE (`/cygdrive/c/program files/*/bin/cmake.exe`), `cygwin`
+      path to `cmake.exe`
+
+Once you've configured all the variables, simply run
+
+```
+./mkimg.sh
+```
+
+The script can also be ran remotely. It copy itself to the remote machine
+through ssh and then run from there. I use it to build on remote Windows
+machine from Linux. Assuming the remote machine has all the required software
+setup properly, run
+
+```
+./mkimg.sh remote <host>:<remote_path>
+```
+
+The remote host and path follows the `scp` usage convention.
 

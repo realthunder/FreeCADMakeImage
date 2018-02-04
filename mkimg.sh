@@ -4,7 +4,10 @@ set -ex
 
 print_usage() {
     cat <<EOF
-usage: $0 [prepare|deb|rebuild]
+usage: $0 [remote <host:path>] [prepare|deb|rebuild]
+
+remote: copy this repository through ssh to host:path, and then run on remote
+        host
 
 prepare: only prepare a source repo of FreeCAD Link branch
 deb: build deb package using pbuilder
@@ -18,16 +21,61 @@ directory.
 EOF
 }
 
-img_name=${IMG_NAME:=img}
+if [ "$1" = remote ]; then
+    shift
+    # expect remote followed by <host>:<path>
+    remote=$1
+    shift
+    host=${remote%:*}
+    path=${remote#*:}
+    if test -z $host || [ "$path" = "$host" ]; then
+        echo "invalid remote host or path"
+        exit 1
+    fi
 
-repo_url=${REPO_URL:=https://github.com/FreeCAD/FreeCAD}
-repo_branch=${REPO_BRANCH:=master}
+    # cd to the directory containing this script
+    dir="`dirname "${BASH_SOURCE[0]}"`"
+    cd $dir
 
-dpkg_url=${DPKG_URL:=https://git.launchpad.net/~freecad-maintainers/+git/gitpackaging}
-dpkg_branch=${DPKG_BRANCH:=dailybuild-occt}
+    # obtain the base directory name of this script, and
+    # append it to remote <path>
+    base=`basename "$PWD"`
+    if test $path; then
+        path=$path/$base
+    else
+        path=$base
+    fi
 
-aimg_url=${AIMG_URL:=https://github.com/realthunder/AppImages.git}
-aimg_branch=${AIMG_BRANCH:=master}
+    # create a temperary script and export all the environment variables
+    echo "#!/bin/bash" > tmp.sh
+    chmod +x tmp.sh
+    set +x
+    env | while read -r line; do
+        if [ "${line:0:4}" = FMK_ ]; then
+            echo export $line >> tmp.sh
+        fi
+    done
+    set -x
+    echo './mkimg.sh $@' >> tmp.sh
+
+    # find all regular file under the current directory, pipe them through
+    # tar -> ssh -> remote tar, and then run the script remotely
+    find . -maxdepth 1 -type f -print0 |
+    tar -c --null -T - |
+    ssh $host -C "mkdir -p $path;cd $path;tar xvf -;./tmp.sh $@"
+    exit
+fi
+
+img_name=${FMK_IMG_NAME:=img}
+
+repo_url=${FMK_REPO_URL:=https://github.com/FreeCAD/FreeCAD}
+repo_branch=${FMK_REPO_BRANCH:=master}
+
+dpkg_url=${FMK_DPKG_URL:=https://git.launchpad.net/~freecad-maintainers/+git/gitpackaging}
+dpkg_branch=${FMK_DPKG_BRANCH:=dailybuild-occt}
+
+aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
+aimg_branch=${FMK_AIMG_BRANCH:=master}
 aimg_recipe=recipe.yml
 
 mkdir -p build/$img_name
@@ -76,7 +124,98 @@ git_fetch repo $repo_url $repo_branch
 # save the last commit hash
 repo_hash=$hash
 # export shortend repo hash for later use during installation
-export REPO_HASH=${hash:0:8}
+export FMK_REPO_HASH=${hash:0:8}
+
+# check for windows building
+if [ "$PROGRAMFILES" != "" ]; then 
+    pushd ../
+    if [ "$PROCESSOR_ARCHITECTURE" != "AMD64" ]; then
+        echo "only support building on Windows x64"
+        exit 1
+    fi
+
+    echo 'building for windows...'
+
+    cmake=${FMK_CMAKE_EXE:=`echo /cygdrive/c/program\ files/*/bin/cmake.exe`}
+    if ! test -e "$cmake"; then
+        echo "CMAKE_EXE not set properly"
+        exit 1
+    fi
+
+    if ! test -d libpack; then
+        url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD-ports-cache/releases/download/v0.17/FreeCADLibs_11.5.1_x64_VC12.7z}
+        wget -c $url -O libpack.7z
+        7z x libpack.7z
+        mv FreeCADLibs* libpack
+    fi
+    popd
+
+    mkdir -p tmp
+    rm -rf tmp/* FreeCAD-*-Win64
+
+    mkdir -p repo/build
+    pushd repo/build
+    if ! test -f FreeCAD_trunk.sln; then
+        "$cmake" .. -DFREECAD_LIBPACK_DIR=../../../libpack -DBUILD_FEM_NETGEN=OFF -G "Visual Studio 12 2013 Win64"
+    fi
+    if ! test -d bin; then
+        set +x
+        dir=$PWD
+        pushd ../../../libpack/bin
+        exclude=bin_exclude.lst
+        rm -f $exclude
+        echo "generate exclude file list..."
+        find . -name '*.*' -print0 |
+        while IFS= read -r -d '' file; do
+            # filter <prefix>d.<ext> if <prefix>.<ext> exists
+            #    or <prefix>_d.<ext> if <prefix>.<ext> exists
+            #
+            # TODO: this two conditions should be able to shorten using
+            # optional character matching in regex, e.g. ${file%%?(_)d.dll}.
+            # Strangely, it works only in terminal but not in script! Why??!!
+
+            ext="${file: -3}"
+            if [ "${file%-gd-*\.dll}" != "$file" ] || \
+               test -f ${file%[Dd]\.$ext}.$ext || \
+               test -f ${file%_[Dd]\.$ext}.$ext;
+            then
+                echo "$file" >> $exclude
+            fi
+        done
+        echo "copying bin directory..."
+        mkdir -p $dir/bin
+        tar --exclude 'h5*.exe' --exclude 'Qt*d4.dll' --exclude 'swig*' --exclude "*.pyc" \
+            --exclude 'boost*-gd-*.dll' --exclude "*.pdb" -X $exclude -cf - . |
+            (cd $dir/bin && tar xvBf -)
+        set -x
+
+        popd
+    fi
+    
+    # get cpu core count
+    ncpu=$(grep -c ^processor /proc/cpuinfo)
+
+    # start building
+    "$cmake" --build . --config Release -- /maxcpucount:$ncpu
+
+    # copy out the result to tmp directory
+    tar --exclude '*.pyc' -cf - bin Mod Ext data | (cd ../../tmp && tar xvBf -)
+    cd ../../tmp
+
+    # install personal workbench. This script will write version string to
+    # ../VERSION file
+    ../../../installwb.sh
+    cd ..
+    name=FreeCAD-`cat VERSION`-Win64
+
+    # archive the result
+    mv tmp $name
+    7z a $name.7z $name
+
+    exit
+fi
+
+# building for linux
 
 # perform a freecad cmake configure to obtain the version header
 mkdir -p repo/build
