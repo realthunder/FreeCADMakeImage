@@ -128,7 +128,7 @@ optional and has default value as shown in the bracket.
 - **FMK_WB_SUB_`<name>`**, a list of submodule names to checkout
 * Windows related variables
     * FMK_LIBPACK_URL
-      (https://github.com/sgrogan/FreeCAD/releases/download/0.17_py_2.17.14/FreeCADLibs_11.9_x64_VC12.7z),
+      (https://github.com/sgrogan/FreeCAD/releases/download/0.17-med-test/FreeCADLibs_11.5.3_x64_VC12.7z),
       URL to download FreeCAD library pack for Windows.
     * FMK_CMAKE_EXE (`/cygdrive/c/program files/*/bin/cmake.exe`), `cygwin`
       path to `cmake.exe`

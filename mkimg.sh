@@ -4,22 +4,25 @@ set -ex
 
 print_usage() {
     cat <<EOF
-usage: $0 [remote <host:path>] [prepare|deb|rebuild]
+usage: $0 [remote <host:path>] [rebuild|prepare|build]
 
 remote: copy this repository through ssh to host:path, and then run on remote
         host
 
-prepare: only prepare a source repo of FreeCAD Link branch
-deb: build deb package using pbuilder
 rebuild: delete any previously built source and binary package, and rebuild
 
-Default behavior is to make sure repo is up to date, and deb package is built,
-and then build the AppImage.
+prepare: only prepare a source repo of FreeCAD Link branch
 
-If everything runs fine, the final AppImage will be located at img sub
-directory.
+build: build deb package with pbuilder, or on Windows build with cmake --build
+
+If no [rebuild|prepare|build] specified, the default behavior is to make sure
+repo is up to date, and deb package is built, and then build the AppImage.
+
+If everything runs fine, the final result will be located at build/out
 EOF
 }
+
+mkdir -p build/out
 
 if [ "$1" = remote ]; then
     shift
@@ -61,8 +64,13 @@ if [ "$1" = remote ]; then
     # find all regular file under the current directory, pipe them through
     # tar -> ssh -> remote tar, and then run the script remotely
     find . -maxdepth 1 -type f -print0 |
-    tar -c --null -T - |
-    ssh $host -C "mkdir -p $path;cd $path;tar xvf -;./tmp.sh $@"
+        tar -c --null -T - |
+        ssh $host -C "mkdir -p $path;cd $path;tar xvf -;./tmp.sh $@"
+
+    [ $build -gt 1 ] || exit
+
+    # rsync back the result
+    rsync -acvrt -e ssh $host:$path/build/out/ ./build/out/
     exit
 fi
 
@@ -89,12 +97,12 @@ cmd=$1
 if test $cmd; then
     case "$1" in
         rebuild)
-            rm -f $dscfile* $debfile
+            rm -f $dscfile* $debfile repo/build/bin
             ;;
         prepare)
             build=0
             ;;
-        deb)
+        build)
             build=1
             ;;
         *)
@@ -143,7 +151,7 @@ if [ "$PROGRAMFILES" != "" ]; then
     fi
 
     if ! test -d libpack; then
-        url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD-ports-cache/releases/download/v0.17/FreeCADLibs_11.5.1_x64_VC12.7z}
+        url=${FMK_LIBPACK_URL:=https://github.com/sgrogan/FreeCAD/releases/download/0.17-med-test/FreeCADLibs_11.5.3_x64_VC12.7z}
         wget -c $url -O libpack.7z
         7z x libpack.7z
         mv FreeCADLibs* libpack
@@ -156,7 +164,7 @@ if [ "$PROGRAMFILES" != "" ]; then
     mkdir -p repo/build
     pushd repo/build
     if ! test -f FreeCAD_trunk.sln; then
-        "$cmake" .. -DFREECAD_LIBPACK_DIR=../../../libpack -DBUILD_FEM_NETGEN=OFF -G "Visual Studio 12 2013 Win64"
+        "$cmake" .. -DFREECAD_LIBPACK_DIR=../../../libpack -G "Visual Studio 12 2013 Win64"
     fi
     if ! test -d bin; then
         set +x
@@ -191,12 +199,16 @@ if [ "$PROGRAMFILES" != "" ]; then
 
         popd
     fi
+
+    [ $build -gt 0 ] || exit
     
     # get cpu core count
     ncpu=$(grep -c ^processor /proc/cpuinfo)
 
     # start building
     "$cmake" --build . --config Release -- /maxcpucount:$ncpu
+
+    [ $build -gt 1 ] || exit
 
     # copy out the result to tmp directory
     tar --exclude '*.pyc' -cf - bin Mod Ext data | (cd ../../tmp && tar xvBf -)
@@ -210,7 +222,7 @@ if [ "$PROGRAMFILES" != "" ]; then
 
     # archive the result
     mv tmp $name
-    7z a $name.7z $name
+    7z a ../out/$name.7z $name
 
     exit
 fi
@@ -271,6 +283,6 @@ if [ $build -gt 1 ]; then
     cd AppImages
     # now generate the AppImage using the recipe
     bash -ex ./pkg2appimage ../$aimg_recipe
-    mv out/FreeCAD-$img_name* ../../
+    mv out/FreeCAD-$img_name*.AppImage ../../out/
 fi
 
