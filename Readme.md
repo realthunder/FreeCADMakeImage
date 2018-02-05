@@ -84,6 +84,8 @@ to install the following software first.
     * git
     * wget
     * tar
+    * rsync
+    * openssh, optional. Only needed if you want to build on remote machine.
 
 # Script Usage
 
