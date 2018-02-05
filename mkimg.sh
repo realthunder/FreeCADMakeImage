@@ -24,11 +24,49 @@ EOF
 
 mkdir -p build/out
 
+remote=
 if [ "$1" = remote ]; then
     shift
     # expect remote followed by <host>:<path>
     remote=$1
     shift
+fi
+
+img_name=${FMK_IMG_NAME:=img}
+
+repo_url=${FMK_REPO_URL:=https://github.com/FreeCAD/FreeCAD}
+repo_branch=${FMK_REPO_BRANCH:=master}
+
+dpkg_url=${FMK_DPKG_URL:=https://git.launchpad.net/~freecad-maintainers/+git/gitpackaging}
+dpkg_branch=${FMK_DPKG_BRANCH:=dailybuild-occt}
+
+aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
+aimg_branch=${FMK_AIMG_BRANCH:=master}
+aimg_recipe=recipe.yml
+
+debfile=$HOME/pbuilder/trusty_result/freecad-daily*amd64.deb
+dscfile=$PWD/build/$img_name/freecad*.dsc
+
+build=2
+cmd=$1
+if test $cmd; then
+    case "$1" in
+        rebuild)
+            rm -f $dscfile* $debfile build/$img_name/repo/build/bin
+            ;;
+        prepare)
+            build=0
+            ;;
+        build)
+            build=1
+            ;;
+        *)
+            print_usage
+            exit 1
+    esac
+fi
+
+if test $remote; then
     host=${remote%:*}
     path=${remote#*:}
     if test -z $host || [ "$path" = "$host" ]; then
@@ -74,43 +112,6 @@ if [ "$1" = remote ]; then
     exit
 fi
 
-img_name=${FMK_IMG_NAME:=img}
-
-repo_url=${FMK_REPO_URL:=https://github.com/FreeCAD/FreeCAD}
-repo_branch=${FMK_REPO_BRANCH:=master}
-
-dpkg_url=${FMK_DPKG_URL:=https://git.launchpad.net/~freecad-maintainers/+git/gitpackaging}
-dpkg_branch=${FMK_DPKG_BRANCH:=dailybuild-occt}
-
-aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
-aimg_branch=${FMK_AIMG_BRANCH:=master}
-aimg_recipe=recipe.yml
-
-mkdir -p build/$img_name
-cd build/$img_name
-
-debfile=$HOME/pbuilder/trusty_result/freecad-daily*amd64.deb
-dscfile=$PWD/freecad*.dsc
-
-build=2
-cmd=$1
-if test $cmd; then
-    case "$1" in
-        rebuild)
-            rm -f $dscfile* $debfile repo/build/bin
-            ;;
-        prepare)
-            build=0
-            ;;
-        build)
-            build=1
-            ;;
-        *)
-            print_usage
-            exit 1
-    esac
-fi
-
 git_fetch() {
     local dir=$1
     local url=$2
@@ -126,6 +127,9 @@ git_fetch() {
     hash=$(git show -s --format=%H)
     popd
 }
+
+mkdir -p build/$img_name
+cd build/$img_name
 
 # prepare freecad repo
 git_fetch repo $repo_url $repo_branch
