@@ -231,6 +231,66 @@ if [ "$PROGRAMFILES" != "" ]; then
     exit
 fi
 
+# building for mac
+if [ $(uname) = 'Darwin' ]; then
+    export CXX=clang++
+    export CC=clang
+    export PATH=/usr/lib/ccache:/usr/local/bin:$PATH
+
+    mkdir -p repo/build
+    pushd repo/build
+
+    QT5_CMAKE_PREFIX=$(ls -d $(brew --cellar)/qt/*/lib/cmake)
+    QT5_WEBKIT_CMAKE_PREFIX=$(ls -d $(brew --cellar)/qtwebkit/*/lib/cmake)
+    INSTALL_PREFIX="../../tmp"
+    mkdir -p "$INSTALL_PREFIX"
+
+   if ! read rhash &>/dev/null < .configure.hash || [ "$rhash" != $repo_hash ]; then
+        cmake \
+        -DCMAKE_BUILD_TYPE="Release"   \
+        -DBUILD_QT5=1                  \
+        -DCMAKE_PREFIX_PATH="${QT5_CMAKE_PREFIX};${QT5_WEBKIT_CMAKE_PREFIX}"  \
+        -DFREECAD_USE_EXTERNAL_KDL=1   \
+        -DBUILD_FEM_NETGEN=1           \
+        -DFREECAD_CREATE_MAC_APP=1     \
+        -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX"  \
+        ../
+
+        echo "$repo_hash" > .configure.hash
+    fi
+    [ $build -gt 0 ] || exit
+
+    ncpu=$(sysctl hw.ncpu | awk '{print $2}')
+    [ "$ncpu" != "1" ] || ncpu=2
+
+    do_build=
+    if ! read rhash &>/dev/null < .build.hash || [ "$rhash" != $repo_hash ]; then
+        do_build=1
+    fi
+    test -z $do_build || make -j$ncpu
+    echo "$repo_hash" > .build.hash
+
+    [ $build -gt 1 ] || exit
+
+    do_install=
+    if ! read rhash &>/dev/null < .install.hash || [ "$rhash" != $repo_hash ]; then
+        do_install=1
+    fi
+    test -z $do_install || make -j$ncpu install
+    echo "$repo_hash" > .install.hash
+
+    APP_PATH="$INSTALL_PREFIX/FreeCAD.app"
+    export FMK_WB_BASE_PATH="$APP_PATH/Contents"
+    export FMK_REPO_VER_PATH="$INSTALL_PREFIX/VERSION"
+
+    ../../../../installwb.sh
+
+    name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
+    echo $name
+    hdiutil create -fs HFS+ -srcfolder "$APP_PATH" ../../../out/$name.dmg
+    exit
+fi
+
 # building for linux
 
 # perform a freecad cmake configure to obtain the version header

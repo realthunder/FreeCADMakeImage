@@ -40,12 +40,17 @@ for wb in $FMK_WB_LIST; do
     path=$base_path/${!path:=Mod}
 
     pushd $path
+
+    rm -rf $wb
     git clone -b $branch --depth 1 --single-branch $url $wb
 
     cd $wb
-    date=`date -d "$(git show -s --format=%aI)" +%Y%m%d%H%M`
-    if [ $date -gt $img_date ]; then
-        img_date=$date
+
+    if test $ref; then
+        date=`date -d "$(git show -s --format=%aI)" +%Y%m%d%H%M`
+        if [ $date -gt $img_date ]; then
+            img_date=$date
+        fi
     fi
 
     sub=FMK_WB_SUB_$wb
@@ -60,6 +65,12 @@ for wb in $FMK_WB_LIST; do
         ver=$ver$(git show -s --format=%h)
     fi
     popd
+
+    find $path -name ".git*" -print | xargs rm -rf
+
+    if test "$FMK_WB_SCRIPT"; then
+        $FMK_WB_SCRIPT $path
+    fi
 done
 
 echo "$FMK_IMG_NAME-${img_date:0:8}-$ver" > ${FMK_REPO_VER_PATH:=../VERSION}
