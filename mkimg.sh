@@ -299,7 +299,7 @@ pushd repo/build
 cmake ..
 cp ./src/Build/Version.h ../src/Build/
 popd
-rm -rf repo/debian
+rm -rf packaging repo/debian
 
 # prepare debain packaging repo
 git_fetch packaging $dpkg_url $dpkg_branch
@@ -311,7 +311,7 @@ cp -a packaging/debian repo/
 
 # make sure the source package are (re)built if anything has changed
 if ! test -f $dscfile ||
-   ! read rhash phash &>/dev/null < $dscfile.hash || \
+   ! read rhash phash &>/dev/null < source.hash || \
    [ "$rhash" != $repo_hash ] || \
    [ "$phash" != $pkg_hash]; 
 then
@@ -319,7 +319,7 @@ then
     cd repo
     echo y | debuild -S -d -us -uc
     cd ..
-    echo "$repo_hash $pkg_hash" > $dscfile.hash
+    echo "$repo_hash $pkg_hash" > source.hash
 fi
 
 dsc_date=`date -r $dscfile +%Y%m%d%H%M`
