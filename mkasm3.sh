@@ -25,4 +25,9 @@ if [ "$1" = 'branch' ]; then
     shift
 fi
 
+if [ "$1" = 'mac' ]; then
+    shift
+    export FMK_WB_SUB_asm3=py_slvs_mac
+fi
+
 ./mkimg.sh $@
