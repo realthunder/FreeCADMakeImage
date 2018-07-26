@@ -155,7 +155,8 @@ if [ "$PROGRAMFILES" != "" ]; then
     fi
 
     if ! test -d libpack; then
-        url=${FMK_LIBPACK_URL:=https://github.com/sgrogan/FreeCAD/releases/download/0.17-med-test/FreeCADLibs_11.5.3_x64_VC12.7z}
+        # url=${FMK_LIBPACK_URL:=https://github.com/sgrogan/FreeCAD/releases/download/0.17-med-test/FreeCADLibs_11.5.3_x64_VC12.7z}
+        url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD-ports-cache/releases/download/v0.18/FreeCADLibs_11.11_x64_VC12.7z}
         wget -c $url -O libpack.7z
         7z x libpack.7z
         mv FreeCADLibs* libpack
@@ -168,7 +169,8 @@ if [ "$PROGRAMFILES" != "" ]; then
     mkdir -p repo/build
     pushd repo/build
     if ! test -f FreeCAD_trunk.sln; then
-        "$cmake" .. -DFREECAD_LIBPACK_DIR=../../../libpack -G "Visual Studio 12 2013 Win64"
+        "$cmake" .. -DFREECAD_LIBPACK_DIR=../../../libpack  \
+            -DOCC_INCLUDE_DIR=../../../libpack/include/opencascade -G "Visual Studio 12 2013 Win64"
     fi
     if ! test -d bin; then
         set +x
@@ -287,6 +289,7 @@ if [ $(uname) = 'Darwin' ]; then
 
     name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
     echo $name
+    rm -f ../../../out/$name.dmg
     hdiutil create -fs HFS+ -srcfolder "$APP_PATH" ../../../out/$name.dmg
     exit
 fi
