@@ -26,7 +26,7 @@ Since AppImage has better support for trusty, we shall stick to that. So we
 create a `pbuilder` trusty distribution, 
 
 ```
-pbuilder-dist create trusty 
+pbuilder-dist trusty create
 ```
 
 Create a file `~/.pbuilderrc` with the following content
@@ -87,6 +87,25 @@ to install the following software first.
     * rsync
     * openssh, optional. Only needed if you want to build on remote machine.
 
+# Mac OSX
+
+The script is also tested to be working on OSX Seirra (10.12) and High Seirra
+(10.13). To build an App bundle for Mac OSX, you'll first need to install the
+dependency using [homebrew](https://brew.sh/). If you haven't install homebrew
+yet, run the following command in a terminal,
+
+```
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
+
+Then install the dependencies
+
+```
+brew tap freecad/freecad
+brew install eigen
+brew install --only-dependencies freecad --with-packaging-utils
+```
+
 # Script Usage
 
 You can configure the [mkimg](./mkimg.sh) script with a list of environment
@@ -94,7 +113,7 @@ variables. It will be easier to write a wrapper script together with the
 configuration. For example, the [mkasm3](./mkasm3.sh) script  will build my 
 [fork](https://github.com/realthunder/FreeCAD/tree/LinkStage3) of FreeCAD, 
 and pre-install the [Assembly3](https://github.com/realthunder/FreeCAD_assembly3)
-workbench. Note that mkimg uses `pbuilder-dist`, which requires root privilege 
+workbench. Note that on Linux mkimg uses `pbuilder-dist`, which requires root privilege 
 when satisfying build dependency, which means that it will prompt for password.
 It's kind of annoying, but seems to be hard to
 [workaround](https://pbuilder.alioth.debian.org/#nonrootchroot).
