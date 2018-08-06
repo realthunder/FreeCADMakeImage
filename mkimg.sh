@@ -38,7 +38,7 @@ repo_url=${FMK_REPO_URL:=https://github.com/FreeCAD/FreeCAD}
 repo_branch=${FMK_REPO_BRANCH:=master}
 
 dpkg_url=${FMK_DPKG_URL:=https://git.launchpad.net/~freecad-maintainers/+git/gitpackaging}
-dpkg_branch=${FMK_DPKG_BRANCH:=dailybuild-occt}
+dpkg_branch=${FMK_DPKG_BRANCH:=dailybuild-occt-trusty}
 
 aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
 aimg_branch=${FMK_AIMG_BRANCH:=master}
