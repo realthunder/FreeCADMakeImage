@@ -42,7 +42,7 @@ dpkg_branch=${FMK_DPKG_BRANCH:=dailybuild-occt-trusty}
 
 aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
 aimg_branch=${FMK_AIMG_BRANCH:=master}
-aimg_recipe=recipe.yml
+aimg_recipe=${FMK_AIMG_RECIPE:=recipe.yml}
 
 debfile=$HOME/pbuilder/trusty_result/freecad-daily*amd64.deb
 dscfile=$PWD/build/$img_name/freecad*.dsc
