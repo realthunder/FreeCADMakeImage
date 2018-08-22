@@ -51,7 +51,7 @@ script:
   - mv ./usr/lib/pyshared/python2.7/matplotlib/*.so ./usr/lib/python2.7/dist-packages/matplotlib/
   - rm -rf ./usr/lib/pyshared/python2.7/matplotlib/
   - # Matplotlib end
-- # Dear upstream developers, please use relative rather than absolute paths
+  - # Dear upstream developers, please use relative rather than absolute paths
   - # then binary patching like this will become unneccessary
   - find usr/ -type f -exec sed -i -e "s@/usr/lib/freecad-daily@././/lib/freecad-daily@g" {} \;
   - find usr/ -type f -exec sed -i -e "s@/usr/share/freecad-daily@././/share/freecad-daily@g" {} \;
