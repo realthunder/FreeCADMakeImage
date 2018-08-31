@@ -299,6 +299,7 @@ fi
 # perform a freecad cmake configure to obtain the version header
 mkdir -p repo/build
 pushd repo/build
+rm -f src/Build/Version.h ../src/Build/Version.h
 cmake ..
 cp ./src/Build/Version.h ../src/Build/
 popd
