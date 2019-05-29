@@ -5,7 +5,7 @@
 set -ex
 
 ref=../freecad-daily*.deb
-if test -f $ref; then
+if test -f "$ref"; then
     ref="-r $ref"
 else
     ref=
@@ -19,7 +19,7 @@ fi
 
 base_path=$FMK_WB_BASE_PATH
 if test -z $base_path; then
-    check_path=./usr/lib/freecad-daily
+    check_path=./usr/share/freecad-daily
     if test -d $check_path; then
         base_path=$check_path
     else

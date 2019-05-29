@@ -32,27 +32,15 @@ if [ "$1" = remote ]; then
     shift
 fi
 
-img_name=${FMK_IMG_NAME:=img}
-
-repo_url=${FMK_REPO_URL:=https://github.com/FreeCAD/FreeCAD}
-repo_branch=${FMK_REPO_BRANCH:=master}
-
-dpkg_url=${FMK_DPKG_URL:=https://git.launchpad.net/~freecad-maintainers/+git/gitpackaging}
-dpkg_branch=${FMK_DPKG_BRANCH:=dailybuild-occt-trusty}
-
-aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
-aimg_branch=${FMK_AIMG_BRANCH:=master}
-aimg_recipe=${FMK_AIMG_RECIPE:=recipe.yml}
-
-debfile=$HOME/pbuilder/trusty_result/freecad-daily*amd64.deb
-dscfile=$PWD/build/$img_name/freecad*.dsc
+dpkg_branch=xenial
+aimg_recipe=recipe.yml
 
 build=2
-cmd=$1
-if test $cmd; then
+args="$@"
+while test $1; do
     case "$1" in
         rebuild)
-            rm -f $dscfile* $debfile build/$img_name/repo/build/bin
+            rm -rf build/$img_name
             ;;
         prepare)
             build=0
@@ -60,11 +48,32 @@ if test $cmd; then
         build)
             build=1
             ;;
+        package)
+            build=3
+            ;;
+        bionic)
+            aimg_recipe=recipe-bionic.yml
+            dpkg_branch=bionic
+            ;;
         *)
             print_usage
             exit 1
     esac
-fi
+    shift
+done
+
+img_name=${FMK_IMG_NAME:=img}
+
+repo_url=${FMK_REPO_URL:=https://github.com/FreeCAD/FreeCAD}
+repo_branch=${FMK_REPO_BRANCH:=master}
+
+dpkg_url=${FMK_DPKG_URL:=https://github.com/realthunder/fcad-packaging.git}
+dpkg_branch=${FMK_DPKG_BRANCH:=$dpkg_branch}
+
+aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
+aimg_branch=${FMK_AIMG_BRANCH:=master}
+aimg_recipe=${FMK_AIMG_RECIPE:=$aimg_recipe}
+
 
 if test $remote; then
     host=${remote%:*}
@@ -77,6 +86,15 @@ if test $remote; then
     # cd to the directory containing this script
     dir="`dirname "${BASH_SOURCE[0]}"`"
     cd $dir
+
+    if test "$FMK_VERSION_HEADER"; then
+        if ! test -f "$FMK_VERSION_HEADER"; then
+            echo "Cannot find version header: $FMK_VERSION_HEADER"
+            exit 1
+        fi
+        cp -f "$FMK_VERSION_HEADER" ./Version.h
+        export FMK_VERSION_HEADER="../../Version.h"
+    fi
 
     # obtain the base directory name of this script, and
     # append it to remote <path>
@@ -93,11 +111,11 @@ if test $remote; then
     set +x
     env | while read -r line; do
         if [ "${line:0:4}" = FMK_ ]; then
-            echo export $line >> tmp.sh
+            echo "export ${line%=*}=\"${line#*=}\"" >> tmp.sh
         fi
     done
     set -x
-    echo './mkimg.sh $@' >> tmp.sh
+    echo "./mkimg.sh $args" >> tmp.sh
 
     # find all regular file under the current directory, pipe them through
     # tar -> ssh -> remote tar, and then run the script remotely
@@ -121,8 +139,12 @@ git_fetch() {
         pushd $dir
     else
         pushd $dir
-        git fetch origin $branch
-        git checkout -qf FETCH_HEAD
+        hash=$(git show -s --format=%H)
+        remote_hash=$(git ls-remote $url $branch | awk '{ print $1 }')
+        if [ "$hash" != "$remote_hash" ]; then
+            git fetch --depth=1 origin $branch
+            git checkout -qf FETCH_HEAD
+        fi
     fi
     hash=$(git show -s --format=%H)
     popd
@@ -133,6 +155,19 @@ cd build/$img_name
 
 # prepare freecad repo
 git_fetch repo $repo_url $repo_branch
+
+if test "$FMK_VERSION_HEADER"; then
+    if ! test -f "$FMK_VERSION_HEADER"; then
+        echo "Cannot find version header: $FMK_VERSION_HEADER"
+        exit 1
+    fi
+    if ! cmp -s "$FMK_VERSION_HEADER" repo/src/Build/Version.h; then
+        cp -f $FMK_VERSION_HEADER repo/src/Build/Version.h
+    fi
+else
+    rm -f repo/src/Build/Version.h
+fi
+
 # save the last commit hash
 repo_hash=$hash
 # export shortend repo hash for later use during installation
@@ -168,14 +203,15 @@ if [ "$PROGRAMFILES" != "" ]; then
 
     mkdir -p repo/build
     pushd repo/build
+    libpack=../../../libpack
     if ! test -f FreeCAD_trunk.sln; then
-        "$cmake" .. -DFREECAD_LIBPACK_DIR=../../../libpack  \
-            -DOCC_INCLUDE_DIR=../../../libpack/include/opencascade -G "Visual Studio 12 2013 Win64"
+        "$cmake" .. -DFREECAD_LIBPACK_DIR=$libpack  \
+            -DOCC_INCLUDE_DIR=$libpack/include/opencascade -G "Visual Studio 12 2013 Win64"
     fi
     if ! test -d bin; then
         set +x
         dir=$PWD
-        pushd ../../../libpack/bin
+        pushd $libpack/bin
         exclude=bin_exclude.lst
         rm -f $exclude
         echo "generate exclude file list..."
@@ -208,6 +244,13 @@ if [ "$PROGRAMFILES" != "" ]; then
 
     [ $build -gt 0 ] || exit
     
+    if test -f ../src/Build/Version.h && \
+        ! cmp -s ../src/Build/Version.h src/Build/Version.h; then
+        rm -rf src/Build/*
+        mkdir -p src/Build
+        cp ../src/Build/Version.h src/Build
+    fi
+
     # get cpu core count
     ncpu=$(grep -c ^processor /proc/cpuinfo)
 
@@ -269,8 +312,16 @@ if [ $(uname) = 'Darwin' ]; then
     if ! read rhash &>/dev/null < .build.hash || [ "$rhash" != $repo_hash ]; then
         do_build=1
     fi
-    test -z $do_build || make -j$ncpu
-    echo "$repo_hash" > .build.hash
+    if test $do_build; then
+        if test -f ../src/Build/Version.h && \
+            ! cmp -s ../src/Build/Version.h src/Build/Version.h; then
+            rm -rf src/Build/*
+            mkdir -p src/Build
+            cp ../src/Build/Version.h src/Build
+        fi
+        make -j$ncpu
+        echo "$repo_hash" > .build.hash
+    fi
 
     [ $build -gt 1 ] || exit
 
@@ -296,49 +347,19 @@ fi
 
 # building for linux
 
-# perform a freecad cmake configure to obtain the version header
-mkdir -p repo/build
-pushd repo/build
-rm -f src/Build/Version.h ../src/Build/Version.h
-cmake ..
-cp ./src/Build/Version.h ../src/Build/
-popd
-rm -rf packaging repo/debian
+if [ $build -ne 3 ]; then
+    # prepare debain packaging repo
+    rm -rf packaging
+    git_fetch packaging $dpkg_url $dpkg_branch
+    # obtain packaging repo last commit hash
+    pkg_hash=$hash
 
-# prepare debain packaging repo
-git_fetch packaging $dpkg_url $dpkg_branch
-# obtain packaging repo last commit hash
-pkg_hash=$hash
+    # copy packaging directory to freecad repo
+    cp -a packaging/debian repo/
 
-# copy packaging directory to freecad repo
-cp -a packaging/debian repo/
-
-# make sure the source package are (re)built if anything has changed
-if ! test -f $dscfile ||
-   ! read rhash phash &>/dev/null < source.hash || \
-   [ "$rhash" != $repo_hash ] || \
-   [ "$phash" != $pkg_hash]; 
-then
-    rm -f $dscfile
-    cd repo
-    echo y | debuild -S -d -us -uc
-    cd ..
-    echo "$repo_hash $pkg_hash" > source.hash
-fi
-
-dsc_date=`date -r $dscfile +%Y%m%d%H%M`
-
-if [ $build -gt 0 ]; then
-    deb_date=0
-    if test -f $debfile; then
-        deb_date=`date -r $debfile +%Y%m%d%H%M`
-    fi
-    if [ $deb_date -lt $dsc_date ]; then
-        pbuilder_dir=$HOME/pbuilder/trusty_result
-        mkdir -p $pbuilder_dir/old
-        mv $pbuilder_dir/freecad-daily* $pbuilder_dir/old/ || true
-        pbuilder-dist trusty build $dscfile
-    fi
+    pushd repo
+    DEB_BUILD_OPTIONS="parallel=4" debuild -b -us -uc
+    popd
 fi
 
 if [ $build -gt 1 ]; then
@@ -350,7 +371,7 @@ if [ $build -gt 1 ]; then
     git_fetch AppImages $aimg_url $aimg_branch
     cd AppImages
     # now generate the AppImage using the recipe
-    bash -ex ./pkg2appimage ../$aimg_recipe
+    DEBDIR="$PWD/.." ARCH=x86_64 ./pkg2appimage ../$aimg_recipe
     mv out/FreeCAD-$img_name*.AppImage ../../out/
 fi
 

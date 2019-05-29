@@ -2,14 +2,15 @@ app: FreeCAD-#NAME#
 binpatch: true
 
 ingredients:
-  dist: xenial
+  dist: bionic
   sources: 
-    - deb http://archive.ubuntu.com/ubuntu/ xenial main universe
-    - deb http://archive.ubuntu.com/ubuntu/ xenial-updates main universe
+    - deb http://archive.ubuntu.com/ubuntu/ bionic main universe
+    - deb http://archive.ubuntu.com/ubuntu/ bionic-updates main universe
   ppas:
     - freecad-maintainers/freecad-daily
   packages:
     - freecad-daily-python2
+    - freecad-daily-python3
     - python-tk
     - python-scipy
     # - calculix-ccx
@@ -19,6 +20,7 @@ ingredients:
     # Use the system provided version of libgomp
     # Version provided in Trusty does not work with new versions of CalculiX
     - libgomp1
+    - libegl-mesa0
   script:
     - for f in ./*freecad*.deb; do
     -   rm -f $f
@@ -43,8 +45,8 @@ script:
   - sed -i -e 's@Path=@# Path=@g' freecad-daily.desktop
   # - sed -i -e 's@Icon=freecad@Icon=freecad-daily@g' freecad-daily.desktop
   - cp ./usr/share/icons/hicolor/64x64/apps/freecad-daily.png .
-  - mv ./usr/lib/lapack/*.so* ./usr/lib/
-  - mv ./usr/lib/libblas/*.so* ./usr/lib/
+  - mv ./usr/lib/x86_64-linux-gnu/lapack/*.so* ./usr/lib/
+  - mv ./usr/lib/x86_64-linux-gnu/blas/*.so* ./usr/lib/
   # Dear upstream developers, please use relative rather than absolute paths
   # then binary patching like this will become unneccessary
   - ( cd ./usr/lib/freecad-daily/ ; ln -s ../../share/ . ) # Why?

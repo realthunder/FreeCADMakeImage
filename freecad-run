@@ -1,0 +1,51 @@
+#!/bin/bash
+
+if [ "$1" = "debug" ];then
+    set -x
+    shift
+fi
+
+dir="$(dirname "$(readlink -f $0)")"
+exe="$(basename "$ARGV0")"
+
+cmd=
+
+# check image name to find out which program to run
+
+case "$exe" in
+*cmd*|*Cmd*|*CMD*)
+    cmd="cmd"
+    ;;
+esac
+
+# if both python2 and 3 version are installed, default to python3
+if test -e "$dir/freecad-python3"; then
+    postfix="-python3"
+    case "$exe" in
+    *python2*|*py2*|*Python2*)
+        postfix="-python2"
+        ;;
+    esac
+else
+    postfix="-python2"
+fi
+
+# now check the first (or two) argument as well
+
+while true; do
+    case "$1" in
+    cmd|Cmd|CMD)
+        cmd=cmd
+        shift
+        ;;
+    py2|python2|Python2)
+        postfix="-python2"
+        shift
+        ;;
+    *)
+        break
+        ;;
+    esac
+done
+
+freecad$cmd$postfix "$@"
