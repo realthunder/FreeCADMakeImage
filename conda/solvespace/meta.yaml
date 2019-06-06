@@ -1,0 +1,30 @@
+{% set name = "solvespace" %}
+{% set version = "2.4.1" %}
+{% set sha256 = "f07464b752e9005dd31c990bcccec46d07411a94da767bd61cbd600a190088e6" %}
+
+package:
+    name: {{ name }}
+    version: {{ version }}
+
+source:
+    fn: {{ name }}_{{ version }}_fc.tar.gz
+    url: https://github.com/realthunder/{{ name }}/archive/v{{ version }}.tar.gz
+    sha256: {{ sha256 }}
+
+build:
+    number: 0
+    skip: true  # [py<36]
+
+requirements:
+    build:
+        - {{ compiler("cxx") }}
+        - ninja
+        - cmake
+        - swig
+    host:
+        - python
+    run:
+        - python
+test:
+    imports:
+        - slvs

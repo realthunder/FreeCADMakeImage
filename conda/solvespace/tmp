@@ -1,0 +1,9 @@
+# Automatic uploading is disabled
+# If you want to upload package(s) to anaconda.org later, type:
+
+anaconda upload /opt/conda/conda-bld/linux-64/solvespace-2.4.1-py37h6bb024c_0.tar.bz2
+
+# To have conda build upload to anaconda.org automatically, use
+# $ conda config --set anaconda_upload yes
+
+anaconda_upload is not set.  Not uploading wheels: []

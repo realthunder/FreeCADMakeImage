@@ -1,0 +1,27 @@
+#!/bin/bash
+HERE="$(dirname "$(readlink -f "${0}")")"
+echo ${HERE}
+export PREFIX=$HERE/usr
+export LD_LIBRARY_PATH=$HERE/usr/lib
+export PYTHONHOME=$HERE/usr
+export GSETTINGS_SCHEMA_DIR=$HERE/usr/share/glib-2.0/schemas:$GSETTINGS_SCHEMA_DIR
+export QT_PLUGIN_PATH=$HERE/usr/plugins
+export QT_XKB_CONFIG_ROOT=$HERE/usr/lib
+export FONTCONFIG_FILE=/etc/fonts/fonts.conf
+export FONTCONFIG_PATH=/etc/fonts
+export GIT_SSL_CAINFO=$HERE/usr/ssl/cacert.pem
+export PYTHONDONTWRITEBYTECODE=1
+#export GDK_PIXBUF_MODULE_FILE=${HERE}/usr/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache
+#export QT_QPA_PLATFORMTHEME=gtk2
+#export GTK_PATH=$HERE/usr/lib/gtk-2.0
+#export GTK_DATA_PREFIX=$HERE/usr
+#export XDG_DATA_DIRS=$HERE/usr/share/:$XDG_DATA_DIRS
+
+name=FreeCAD
+if [ "${ARGV0#*cmd*}" = 'cmd' ]; then
+    name=${name}Cmd
+elif [ "$1" = 'cmd' ]; then
+    shift
+    name=${name}Cmd
+fi
+${HERE}/usr/bin/$name "$@"
