@@ -7,8 +7,7 @@ package:
   version: {{ version }}
 
 source:
-  git_url: https://github.com/realthunder/FreeCAD.git
-  git_tag: LinkStage3
+  path: ../../build/conda/repo
 
 build:
   number: 1
@@ -104,4 +103,4 @@ about:
 
 extra:
   recipe-maintainers:
-    - looooo
+    - realthunder

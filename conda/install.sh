@@ -17,6 +17,7 @@ conda create \
     calculix blas=*=openblas gitpython \
     numpy matplotlib scipy sympy pandas six pyyaml \
     qt=5.6.3 \
+    occt=7.3.0=h3be52bf_1003 \
     --copy \
     --no-default-packages \
     -c freecad \
@@ -28,7 +29,8 @@ conda install -p $APPDIR/usr --use-local freecad-asm3 -y
 # install asm3 workbench
 pushd $APPDIR/usr/Ext/freecad
 rm -rf asm3
-git clone https://github.com/realthunder/FreeCAD_assembly3.git asm3
+git clone --single-branch --depth 1 https://github.com/realthunder/FreeCAD_assembly3.git asm3
+rm -rf asm3/.git
 popd
 
 # installing some additional libraries with pip
