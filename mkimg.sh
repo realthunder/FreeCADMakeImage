@@ -117,10 +117,10 @@ if test $remote; then
     set -x
     echo "./mkimg.sh $args" >> tmp.sh
 
-    # find all regular file under the current directory, pipe them through
+    # pipe current directory (excluding the build directory) through
     # tar -> ssh -> remote tar, and then run the script remotely
-    find . -maxdepth 1 -type f -print0 |
-        tar -c --null -T - |
+    find . \( -path ./build -o -path ./.git \) -prune -o -print0 |
+        tar --exclude='./build' --exclude './.git' -c --null -T - |
         ssh $host -C "mkdir -p $path;cd $path;tar xvf -;./tmp.sh $@"
 
     [ $build -gt 1 ] || exit
@@ -358,7 +358,8 @@ if [ $build -ne 3 ]; then
     cp -a packaging/debian repo/
 
     pushd repo
-    DEB_BUILD_OPTIONS="parallel=4" debuild -b -us -uc
+    ncpu=$(grep -c ^processor /proc/cpuinfo)
+    DEB_BUILD_OPTIONS="parallel=$ncpu" debuild -b -us -uc
     popd
 fi
 
