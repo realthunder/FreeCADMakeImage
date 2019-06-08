@@ -35,10 +35,14 @@ fi
 dpkg_branch=xenial
 aimg_recipe=recipe.yml
 
+conda=
 build=2
 args="$@"
 while test $1; do
     case "$1" in
+        conda)
+            conda=1
+            ;;
         rebuild)
             rm -rf build/$img_name
             ;;
@@ -149,6 +153,10 @@ git_fetch() {
     hash=$(git show -s --format=%H)
     popd
 }
+
+if test $conda; then
+    img_name=conda
+fi
 
 mkdir -p build/$img_name
 cd build/$img_name
@@ -346,6 +354,30 @@ if [ $(uname) = 'Darwin' ]; then
 fi
 
 # building for linux
+
+if test $conda; then
+    docker_name="conda-forge"
+    conda_img_name="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"
+    if [ $build -ne 3 ]; then
+        sudo docker start $docker_name && \
+            sudo docker exec -u conda -t -i -w /home/conda/projects/FreeCADMakeImage/conda/freecad_asm3 \
+                $docker_name /bin/bash -c "/opt/conda/bin/conda build ."
+    fi
+    if [ $build -gt 1 ]; then
+        rm -rf wb/*
+        mkdir -p wb
+        FMK_WB_BASE_PATH=wb ../../installwb.sh
+        sudo docker start $docker_name && \
+            sudo docker exec -u conda -t -i -w /home/conda/ \
+                $docker_name /bin/bash -c \
+                    "source /opt/conda/etc/profile.d/conda.sh && \
+                     export FMK_CONDA_IMG_NAME=$conda_img_name && \
+                     export FMK_CONDA_FC_EXTRA=/home/conda/projects/FreeCADMakeImage/build/conda/wb && \
+                     projects/FreeCADMakeImage/conda/install.sh" && \
+            sudo docker cp $docker_name:/home/conda/$conda_img_name.AppImage ../out 
+    fi
+    exit
+fi
 
 if [ $build -ne 3 ]; then
     # prepare debain packaging repo

@@ -39,6 +39,7 @@ for wb in $FMK_WB_LIST; do
     path=FMK_WB_PATH_$wb
     path=$base_path/${!path:=Mod}
 
+    mkdir -p $path
     pushd $path
 
     rm -rf $wb

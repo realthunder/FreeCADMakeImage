@@ -4,43 +4,39 @@ set -e
 
 dir="$(dirname "$(readlink -f $0)")"
 
-APPDIR=$1
-if test -z $APPDIR; then
-    APPDIR=AppDir_asm3
-fi
+image_name=${FMK_CONDA_IMG_NAME:="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"}
+appdir=${FMK_CONDA_APPDIR:="AppDir_asm3"}
 
-mkdir -p $APPDIR/usr
-cp $dir/AppDir/* $APPDIR/
+rm -rf $appdir/*
+mkdir -p $appdir/usr
+cp $dir/AppDir/* $appdir/
 
 conda create \
-    -p $APPDIR/usr \
-    calculix blas=*=openblas gitpython \
+    -p $appdir/usr \
+    calculix blas=*=openblas git gitpython \
     numpy matplotlib scipy sympy pandas six pyyaml \
     qt=5.6.3 \
-    occt=7.3.0=h3be52bf_1003 \
+    occt \
     --copy \
     --no-default-packages \
     -c freecad \
     -c conda-forge \
     -y
 
-conda install -p $APPDIR/usr --use-local freecad-asm3 -y
+conda install -p $appdir/usr --use-local freecad-asm3 -y
 
-# install asm3 workbench
-pushd $APPDIR/usr/Ext/freecad
-rm -rf asm3
-git clone --single-branch --depth 1 https://github.com/realthunder/FreeCAD_assembly3.git asm3
-rm -rf asm3/.git
-popd
+if test "$FMK_CONDA_FC_EXTRA"; then
+    cp -a "$FMK_CONDA_FC_EXTRA"/* $appdir/usr/
+fi
 
 # installing some additional libraries with pip
-conda run -p $APPDIR/usr pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
+conda run -p $appdir/usr pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
 
 # remove bloat
-pushd "$APPDIR"/usr
+pushd "$appdir"/usr
 rm -rf pkgs
 find -type d -iname '__pycache__' -print0 | xargs -0 rm -r
-find -type f -iname '*.so*' -print -exec strip '{}' \;
+# find -type f -iname '*.so*' -print -exec strip '{}' \;
 find -type f -iname '*.a' -print -delete
 rm -rf lib/cmake/
 rm -rf include/
@@ -63,11 +59,9 @@ rm -rf bin_tmp
 
 popd
 
-version_name=FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64
-
-APPTOOL=appimagetool
-if ! test -e $APPTOOL/AppRun; then
-    if test -d $APPTOOL; then
+apptool=appimagetool
+if ! test -e $apptool/AppRun; then
+    if test -d $apptool; then
         echo "Invalid appimagetool directory"
         exit 1
     fi
@@ -78,8 +72,8 @@ if ! test -e $APPTOOL/AppRun; then
     curl -OL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
     chmod +x appimagetool-x86_64.AppImage
     ./appimagetool-x86_64.AppImage --appimage-extract
-    mv squashfs-root $APPTOOL
+    mv squashfs-root $apptool
 fi
 
-ARCH=x86_64 $APPTOOL/AppRun $APPDIR ${version_name}.AppImage
+ARCH=x86_64 $apptool/AppRun $appdir ${image_name}.AppImage
 
