@@ -129,8 +129,8 @@ if test $remote; then
 
     [ $build -gt 1 ] || exit
 
-    # rsync back the result
-    rsync -acvrt -e ssh $host:$path/build/out/ ./build/out/
+    # tar pipe back the result and clean the remote computer
+    ssh $host "cd $path/build/out && tar cf - . && rm -rf *" | tar xvf - -C ./build/out
     exit
 fi
 
