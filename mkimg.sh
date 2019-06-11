@@ -35,13 +35,35 @@ fi
 dpkg_branch=xenial
 aimg_recipe=recipe.yml
 
+bionic=
+docker=
 conda=
 build=2
-args="$@"
+args=
+run=
+sudo=
 while test $1; do
-    case "$1" in
+    arg=$1
+    case "$arg" in
+        sudo)
+            sudo=sudo
+            shift
+            continue
+            ;;
         conda)
-            conda=1
+            conda=${arg#*=}
+            ;;
+        docker=*)
+            docker=${arg#*=}
+            if [ ${docker#bionic} != $docker ]; then
+                bionic=1
+                args+=" bionic"
+            fi
+            shift
+            continue
+            ;;
+        run=*)
+            run=${arg#*=}
             ;;
         rebuild)
             rm -rf build/$img_name
@@ -56,6 +78,7 @@ while test $1; do
             build=3
             ;;
         bionic)
+            bionic=1
             aimg_recipe=recipe-bionic.yml
             dpkg_branch=bionic
             ;;
@@ -63,6 +86,7 @@ while test $1; do
             print_usage
             exit 1
     esac
+    args+=" $arg"
     shift
 done
 
@@ -78,8 +102,65 @@ aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
 aimg_branch=${FMK_AIMG_BRANCH:=master}
 aimg_recipe=${FMK_AIMG_RECIPE:=$aimg_recipe}
 
+prepare_remote() {
+    # copy Version.h header and make sure it works for local and remote build
+    if test "$FMK_VERSION_HEADER"; then
+        if ! test -f "$FMK_VERSION_HEADER"; then
+            echo "Cannot find version header: $FMK_VERSION_HEADER"
+            exit 1
+        fi
+        cp -f "$FMK_VERSION_HEADER" ./Version.h
+        export FMK_VERSION_HEADER="../../Version.h"
+    fi
+
+    # create a temperary script and export all the environment variables, this is
+    # to prepare for either remote (ssh) build or docker build
+
+    echo "#!/bin/bash" > tmp.sh
+    chmod +x tmp.sh
+    set +x
+    env | while read -r line; do
+        if [ "${line:0:4}" = FMK_ ]; then
+            echo "export ${line%=*}=\"${line#*=}\"" >> tmp.sh
+        fi
+    done
+    set -x
+    echo "./mkimg.sh $args" >> tmp.sh
+}
+
+if test "$docker"; then
+    if test $bionic; then
+        dockerfile=Dockerfile.bionic
+    else
+        dockerfile=Dockerfile.xenial
+    fi
+    $sudo docker build -t $docker -f ./docker/$dockerfile ./docker
+    if test "$run"; then
+        IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
+        xhost + $IP
+        if which readlink; then
+            run=`readlink -e "$run"`
+        fi
+        $sudo docker run --rm -it -e DISPLAY=${IP}:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
+            -v "$run":/AppImage -v "$HOME":/shared --security-opt seccomp:unconfined ${docker} \
+            bash -c "/AppImage --appimage-extract && squashfs-root/AppRun"
+        exit
+    fi
+
+    prepare_remote
+    mkdir -p ./build/out
+    mkdir -p ./build/docker
+    cd build/docker
+    mkdir -p $docker
+    find ../../ -maxdepth 1 -type f | xargs -I {} cp {} $docker/
+    $sudo docker run --rm -ti -v $PWD/$docker:/home/freecad/works -w /home/freecad/works \
+        $docker bash -c "./tmp.sh"
+    mv $docker/build/out/* ../out/
+    exit
+fi
 
 if test $remote; then
+    prepare_remote
     host=${remote%:*}
     path=${remote#*:}
     if test -z $host || [ "$path" = "$host" ]; then
@@ -91,15 +172,6 @@ if test $remote; then
     dir="`dirname "${BASH_SOURCE[0]}"`"
     cd $dir
 
-    if test "$FMK_VERSION_HEADER"; then
-        if ! test -f "$FMK_VERSION_HEADER"; then
-            echo "Cannot find version header: $FMK_VERSION_HEADER"
-            exit 1
-        fi
-        cp -f "$FMK_VERSION_HEADER" ./Version.h
-        export FMK_VERSION_HEADER="../../Version.h"
-    fi
-
     # obtain the base directory name of this script, and
     # append it to remote <path>
     base=`basename "$PWD"`
@@ -109,23 +181,11 @@ if test $remote; then
         path=$base
     fi
 
-    # create a temperary script and export all the environment variables
-    echo "#!/bin/bash" > tmp.sh
-    chmod +x tmp.sh
-    set +x
-    env | while read -r line; do
-        if [ "${line:0:4}" = FMK_ ]; then
-            echo "export ${line%=*}=\"${line#*=}\"" >> tmp.sh
-        fi
-    done
-    set -x
-    echo "./mkimg.sh $args" >> tmp.sh
-
     # pipe current directory (excluding the build directory) through
     # tar -> ssh -> remote tar, and then run the script remotely
     find . \( -path ./build -o -path ./.git \) -prune -o -print0 |
         tar --exclude='./build' --exclude './.git' -c --null -T - |
-        ssh $host -C "mkdir -p $path;cd $path;tar xvf -;./tmp.sh $@"
+        ssh $host -C "mkdir -p $path;cd $path;tar xvf -;./tmp.sh"
 
     [ $build -gt 1 ] || exit
 
@@ -356,7 +416,7 @@ fi
 # building for linux
 
 if test $conda; then
-    docker_name="conda-forge"
+    docker_name=$conda
     conda_img_name="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"
     if [ $build -ne 3 ]; then
         sudo docker start $docker_name && \

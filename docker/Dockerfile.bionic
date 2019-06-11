@@ -1,0 +1,10 @@
+FROM ubuntu:18.04
+
+COPY bionic_deps.sh .
+COPY setup.sh .
+RUN /setup.sh
+
+USER freecad
+WORKDIR /home/freecad
+
+CMD ["/bin/bash"]
