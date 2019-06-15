@@ -37,11 +37,14 @@ aimg_recipe=recipe.yml
 
 bionic=
 docker=
+dockerfile=
 conda=
+conda_recipes="./recipes"
 build=2
 args=
 run=
 sudo=
+rebuild=
 while test $1; do
     arg=$1
     case "$arg" in
@@ -52,21 +55,45 @@ while test $1; do
             ;;
         conda)
             conda=${arg#*=}
+            if [ $conda = conda ]; then
+                conda=conda-fc-dev
+            fi
             ;;
-        docker=*)
-            docker=${arg#*=}
-            if [ ${docker#bionic} != $docker ]; then
-                bionic=1
-                args+=" bionic"
+        conda-recipes=*)
+            conda_recipes=${arg#*=}
+            ;;
+        dockerfile=*)
+            dockerfile=${arg#*=}
+            if which readlink; then
+                dockerfile=`readlink -e "$dockerfile"`
             fi
             shift
             continue
             ;;
-        run=*)
+        docker*)
+            docker=${arg#*=}
+            case "$docker" in
+            xenial*)
+                if [ "$docker" = xenial ]; then
+                    docker=xenial-fc-dev
+                fi
+                ;;
+            *)
+                if [ "$docker" = bionic ] || [ "$docker" = docker]; then
+                    docker=bionic-fc-dev
+                fi
+                bionic=1
+                args+=" bionic"
+                ;;
+            esac
+            shift
+            continue
+            ;;
+        run*)
             run=${arg#*=}
             ;;
         rebuild)
-            rm -rf build/$img_name
+            rebuild=1
             ;;
         prepare)
             build=0
@@ -129,21 +156,46 @@ prepare_remote() {
 }
 
 if test "$docker"; then
-    if test $bionic; then
-        dockerfile=Dockerfile.bionic
+
+    if test "$dockerfile"; then
+        $sudo docker build -t $docker -f "$dockerfile" "$(dirname "$dockerfile")"
     else
-        dockerfile=Dockerfile.xenial
+        if test $bionic; then
+            dist=bionic
+            dist_ver=18.04
+        else
+            dist=xenial
+            dist_ver=16.04
+        fi
+
+        $sudo docker build -t $docker -f - ./docker << EOS
+FROM ubuntu:$dist_ver
+
+COPY ${dist}_deps.sh .
+COPY setup.sh .
+RUN /setup.sh ${dist}_deps.sh $UID
+
+USER freecad
+WORKDIR /home/freecad
+
+CMD ["/bin/bash"]
+EOS
+
     fi
-    $sudo docker build -t $docker -f ./docker/$dockerfile ./docker
+
     if test "$run"; then
-        IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
-        xhost + $IP
-        if which readlink; then
+        if [ "$run" != run ] && which readlink; then
             run=`readlink -e "$run"`
         fi
-        $sudo docker run --rm -it -e DISPLAY=${IP}:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
-            -v "$run":/AppImage -v "$HOME":/shared --security-opt seccomp:unconfined ${docker} \
-            bash -c "/AppImage --appimage-extract && squashfs-root/AppRun"
+        IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
+        xhost + $IP
+        docker_cmd="docker run --rm -it -e DISPLAY=${IP}:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
+                -v "$run":/AppImage -v "$HOME":/shared --security-opt seccomp:unconfined ${docker} "
+        if [ "$run" = run ]; then
+            $sudo $docker_cmd bash
+        else
+            $sudo $docker_cmd bash -c "/AppImage --appimage-extract && squashfs-root/AppRun"
+        fi
         exit
     fi
 
@@ -215,11 +267,17 @@ git_fetch() {
 }
 
 if test $conda; then
-    img_name=conda
+    build_dir=conda/$img_name
+else
+    build_dir=$img_name
 fi
 
-mkdir -p build/$img_name
-cd build/$img_name
+if test $rebuild; then
+    rm -rf build/$build_dir
+fi
+
+mkdir -p build/$build_dir
+cd build/$build_dir
 
 # prepare freecad repo
 git_fetch repo $repo_url $repo_branch
@@ -417,25 +475,50 @@ fi
 
 if test $conda; then
     docker_name=$conda
-    conda_img_name="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"
+    date=$(date +%Y%m%d)
+    conda_img_name="FreeCAD-$img_name-Conda-Py3Qt5-$date-glibc2.12-x86_64"
+
+    $sudo docker build -t $conda - << EOS
+FROM condaforge/linux-anvil-comp7
+
+RUN yum install -y mesa-libGL-devel \
+    && useradd -u $UID -ms /bin/bash conda \
+    && echo 'conda:conda' |chpasswd
+EOS
+
+    rm -rf recipes
+    cp -a ../../../conda recipes
+    mkdir -p conda-bld cache
+
+    cmd="export CONDA_BLD_PATH=/home/conda/conda-bld "
+
+    if test "$run"; then
+        IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
+        xhost + $IP
+        $sudo docker run --rm -ti -v $PWD:/home/conda -e DISPLAY=${IP}:0 \
+            -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME":/shared \
+             --security-opt seccomp:unconfined ${conda} bash
+        exit
+    fi
+
     if [ $build -ne 3 ]; then
-        sudo docker start $docker_name && \
-            sudo docker exec -u conda -t -i -w /home/conda/projects/FreeCADMakeImage/conda/freecad_asm3 \
-                $docker_name /bin/bash -c "/opt/conda/bin/conda build ."
+        cmd+="&& conda build --dirty --no-remove-work-dir --keep-old-work \
+                    --cache-dir ./cache $conda_recipes"
     fi
     if [ $build -gt 1 ]; then
         rm -rf wb/*
         mkdir -p wb
-        FMK_WB_BASE_PATH=wb ../../installwb.sh
-        sudo docker start $docker_name && \
-            sudo docker exec -u conda -t -i -w /home/conda/ \
-                $docker_name /bin/bash -c \
-                    "source /opt/conda/etc/profile.d/conda.sh && \
-                     export FMK_CONDA_IMG_NAME=$conda_img_name && \
-                     export FMK_CONDA_FC_EXTRA=/home/conda/projects/FreeCADMakeImage/build/conda/wb && \
-                     projects/FreeCADMakeImage/conda/install.sh" && \
-            sudo docker cp $docker_name:/home/conda/$conda_img_name.AppImage ../out 
+        FMK_WB_BASE_PATH=wb ../../../installwb.sh
+        cmd+="&& export FMK_CONDA_IMG_NAME=$conda_img_name \
+              && export FMK_CONDA_FC_EXTRA=/home/conda/wb \
+              && recipes/install.sh"
     fi
+    $sudo docker run --rm -ti -v $PWD:/home/conda $conda /bin/bash -c "$cmd"
+
+    if [ $build -gt 1 ]; then
+        mv ${conda_img_name}.AppImage ../../out/
+    fi
+
     exit
 fi
 
