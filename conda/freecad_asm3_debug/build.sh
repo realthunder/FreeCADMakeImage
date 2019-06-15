@@ -1,9 +1,9 @@
-mkdir -p build/release
-cd build/release
+mkdir -p build/debug
+cd build/debug
 
 cmake -G "Ninja" \
       -D BUID_WITH_CONDA:BOOL=ON \
-      -D CMAKE_BUILD_TYPE=Release \
+      -D CMAKE_BUILD_TYPE=Debug \
       -D CMAKE_INSTALL_PREFIX:FILEPATH=$PREFIX \
       -D CMAKE_PREFIX_PATH:FILEPATH=$PREFIX \
       -D CMAKE_LIBRARY_PATH:FILEPATH=$PREFIX/lib \
