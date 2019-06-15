@@ -24,4 +24,5 @@ elif [ "$1" = 'cmd' ]; then
     shift
     name=${name}Cmd
 fi
-${HERE}/usr/bin/$name "$@"
+cd ${HERE}/usr/bin
+./$name "$@"

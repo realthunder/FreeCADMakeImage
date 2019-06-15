@@ -15,7 +15,7 @@ conda create \
     -p $appdir/usr \
     calculix blas=*=openblas git gitpython \
     numpy matplotlib scipy sympy pandas six pyyaml \
-    qt=5.6.3 \
+    qt \
     occt \
     --copy \
     --no-default-packages \
@@ -32,8 +32,12 @@ fi
 # installing some additional libraries with pip
 conda run -p $appdir/usr pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
 
+pushd "$appdir"
+
+app_path="$PWD/"
+
 # remove bloat
-pushd "$appdir"/usr
+pushd usr
 rm -rf pkgs
 find -type d -iname '__pycache__' -print0 | xargs -0 rm -r
 # find -type f -iname '*.so*' -print -exec strip '{}' \;
@@ -57,6 +61,45 @@ cp bin_tmp/assistant bin/
 sed -i '1s|.*|#!/usr/bin/env python|' bin/pip
 rm -rf bin_tmp
 
+replace_path_gen() {
+    local path="$1"
+    local postfix="$2"
+    local plen=${#postfix}
+    local len=${#path}
+    if [ $len -lt $plen ];then
+        exit 1
+    fi
+    len=$((len-plen))
+    local res=$(printf '%*s' "$((len/2))")
+    res=${res// /./}
+    if [ $((len%2)) -ne 0 ];then
+        res+='/'
+    fi
+    echo "$res$postfix"
+}
+
+# Conda installation puts lots of hard coded aboslute path of the installed
+# location. The following code is used to replace it with a relative path
+# calculated from usr/bin. We also make sure to cd to usr/bin before starting
+# FreeCAD, which is done in AppRun script. 
+#
+# This solution is probably not as elegant as the one below to solve the
+# QWebEngineProcess issue, however, changing the path here also solves the
+# XmbTextListToTextProperty error message.
+#
+app_path_rpl=$(replace_path_gen "$app_path" ../../)
+find . -type f -exec sed -i -e "s@$app_path@$app_path_rpl@g" {} \;
+
+# Alternative to the above solution, we can use qt.conf for relocation. The one
+# inside usr/bin is for FreeCAD, and another one in usr/libexec for
+# QWebEngineProcess, which runs as a separate process.
+cat > bin/qt.conf << EOS
+[Paths]
+Prefix = ./../
+EOS
+cp bin/qt.conf libexec/
+
+popd
 popd
 
 apptool=appimagetool
