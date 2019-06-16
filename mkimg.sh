@@ -4,18 +4,16 @@ set -ex
 
 print_usage() {
     cat <<EOF
-usage: $0 [remote <host:path>] [rebuild|prepare|build]
+usage: $0 [remote=<host:path>] [rebuild|build]
 
 remote: copy this repository through ssh to host:path, and then run on remote
         host
 
 rebuild: delete any previously built source and binary package, and rebuild
 
-prepare: only prepare a source repo of FreeCAD Link branch
-
 build: build deb package with pbuilder, or on Windows build with cmake --build
 
-If no [rebuild|prepare|build] specified, the default behavior is to make sure
+If no [rebuild|build] specified, the default behavior is to make sure
 repo is up to date, and deb package is built, and then build the AppImage.
 
 If everything runs fine, the final result will be located at build/out
@@ -24,20 +22,10 @@ EOF
 
 mkdir -p build/out
 
-remote=
-if [ "$1" = remote ]; then
-    shift
-    # expect remote followed by <host>:<path>
-    remote=$1
-    shift
-fi
-
-dpkg_branch=xenial
-aimg_recipe=recipe.yml
-
-bionic=
 docker=
 dockerfile=
+dist=bionic
+dist_ver=
 conda=
 conda_recipes="./recipes"
 build=2
@@ -48,6 +36,11 @@ rebuild=
 while test $1; do
     arg=$1
     case "$arg" in
+        remote=*)
+            remote=${arg#*=}
+            shift
+            continue
+            ;;
         sudo)
             sudo=sudo
             shift
@@ -70,24 +63,16 @@ while test $1; do
             shift
             continue
             ;;
-        docker*)
+        docker|docker=*)
             docker=${arg#*=}
-            case "$docker" in
-            xenial*)
-                if [ "$docker" = xenial ]; then
-                    docker=xenial-fc-dev
-                fi
-                ;;
-            *)
-                if [ "$docker" = bionic ] || [ "$docker" = docker]; then
-                    docker=bionic-fc-dev
-                fi
-                bionic=1
-                args+=" bionic"
-                ;;
-            esac
             shift
             continue
+            ;;
+        dist=*)
+            dist=${arg#*=}
+            ;;
+        dist-ver=*)
+            dist_ver=${arg#*=}
             ;;
         run*)
             run=${arg#*=}
@@ -95,19 +80,11 @@ while test $1; do
         rebuild)
             rebuild=1
             ;;
-        prepare)
-            build=0
-            ;;
         build)
             build=1
             ;;
         package)
             build=3
-            ;;
-        bionic)
-            bionic=1
-            aimg_recipe=recipe-bionic.yml
-            dpkg_branch=bionic
             ;;
         *)
             print_usage
@@ -123,11 +100,11 @@ repo_url=${FMK_REPO_URL:=https://github.com/FreeCAD/FreeCAD}
 repo_branch=${FMK_REPO_BRANCH:=master}
 
 dpkg_url=${FMK_DPKG_URL:=https://github.com/realthunder/fcad-packaging.git}
-dpkg_branch=${FMK_DPKG_BRANCH:=$dpkg_branch}
+dpkg_branch=${FMK_DPKG_BRANCH:=$dist}
 
 aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
 aimg_branch=${FMK_AIMG_BRANCH:=master}
-aimg_recipe=${FMK_AIMG_RECIPE:=$aimg_recipe}
+aimg_recipe=${FMK_AIMG_RECIPE:=recipe-$dist.yml}
 
 prepare_remote() {
     # copy Version.h header and make sure it works for local and remote build
@@ -156,18 +133,29 @@ prepare_remote() {
 }
 
 if test "$docker"; then
-
+    if ! test -f docker/${dist}_deps.sh; then
+        echo unknown build dependency for dist $dist
+        exit 1
+    fi
+    if [ "$docker" = docker ]; then
+        docker="${dist}-fc-dev"
+    fi
+    if test -z "$dist_ver"; then
+        case $dist in
+        bionic)
+            dist_ver=18.04
+            ;;
+        xenial)
+            dist_ver=16.04
+            ;;
+        *)
+            echo unknown dist version for $dist
+            exit 1
+        esac
+    fi
     if test "$dockerfile"; then
         $sudo docker build -t $docker -f "$dockerfile" "$(dirname "$dockerfile")"
     else
-        if test $bionic; then
-            dist=bionic
-            dist_ver=18.04
-        else
-            dist=xenial
-            dist_ver=16.04
-        fi
-
         $sudo docker build -t $docker -f - ./docker << EOS
 FROM ubuntu:$dist_ver
 

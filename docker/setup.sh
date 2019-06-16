@@ -2,9 +2,13 @@
 
 set -e
 
-arg=$1
-test "$arg" || arg="./bionic_deps.sh"
-source $arg
+deps=$1
+test "$deps" || deps=./bionic_deps.sh
+
+uid=$2
+test "$uid" || uid=1000
+
+source $deps
 
 export DEBIAN_FRONTEND=noninteractive
 export TERM=xterm
@@ -22,6 +26,6 @@ rm -rf /var/lib/apt/lists/* \
    /usr/share/man/* \
    /usr/share/info/*
 
-useradd -ms /bin/bash freecad
+useradd -u $uid -ms /bin/bash freecad
 echo 'freecad:freecad' |chpasswd
 
