@@ -73,7 +73,7 @@ requirements:
     - numpy
     - six
     - pyyaml
-    - solvespace
+    # - solvespace
 
 test:
   commands:

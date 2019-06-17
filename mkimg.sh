@@ -114,7 +114,11 @@ prepare_remote() {
             exit 1
         fi
         cp -f "$FMK_VERSION_HEADER" ./Version.h
-        export FMK_VERSION_HEADER="../../Version.h"
+        if test $conda; then
+            export FMK_VERSION_HEADER="../../../Version.h"
+        else
+            export FMK_VERSION_HEADER="../../Version.h"
+        fi
     fi
 
     # create a temperary script and export all the environment variables, this is
@@ -392,6 +396,37 @@ fi
 
 # building for mac
 if [ $(uname) = 'Darwin' ]; then
+
+    if test $conda; then
+        rm -rf ./recipes
+        cp -a ../../../conda ./recipes
+        conda_host=MacOSX
+        conda_path=env
+        . ./recipes/setup.sh
+
+        if [ $build -ne 3 ]; then
+            $conda_cmd --dirty --no-remove-work-dir --keep-old-work $conda_recipes
+        fi
+        if [ $build -gt 0 ]; then
+            cd recipes
+            app_path=MacBundle
+            base_path=$app_path/FreeCAD.app/Contents/Resources
+            ./install.sh $base_path
+
+            export FMK_WB_BASE_PATH=$base_path
+            export FMK_REPO_VER_PATH="$base_path/VERSION"
+            ../../../../installwb.sh
+
+            ver=$(conda run -p $base_path python get_freecad_version.py)
+
+            date=$(date +%Y%m%d)
+            out=../../../out/FreeCAD-$img_name-Conda-Py3Qt5-$date-$ver
+            rm -f $out
+            hdiutil create -fs HFS+ -srcfolder "$app_path" $out
+        fi
+        exit
+    fi
+
     export CXX=clang++
     export CC=clang
     export PATH=/usr/lib/ccache:/usr/local/bin:$PATH
@@ -417,6 +452,7 @@ if [ $(uname) = 'Darwin' ]; then
 
         echo "$repo_hash" > .configure.hash
     fi
+
     [ $build -gt 0 ] || exit
 
     ncpu=$(sysctl hw.ncpu | awk '{print $2}')
@@ -494,12 +530,16 @@ EOS
                     --cache-dir ./cache $conda_recipes"
     fi
     if [ $build -gt 1 ]; then
+        appdir=${FMK_CONDA_APPDIR:="AppDir_asm3"}
         rm -rf wb/*
         mkdir -p wb
         FMK_WB_BASE_PATH=wb ../../../installwb.sh
         cmd+="&& export FMK_CONDA_IMG_NAME=$conda_img_name \
               && export FMK_CONDA_FC_EXTRA=/home/conda/wb \
-              && recipes/install.sh"
+              && rm -rf $appdir \
+              && mkdir -p $appdir/usr \
+              && cp recipes/AppDir/* $appdir/ \
+              && recipes/install.sh $appdir/usr appimage"
     fi
     $sudo docker run --rm -ti -v $PWD:/home/conda $conda /bin/bash -c "$cmd"
 
