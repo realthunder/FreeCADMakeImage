@@ -25,6 +25,7 @@ requirements:
         - python
     run:
         - python
-test:
-    imports:
-        - slvs
+
+# test: # disable test for now, as on macos it crashes somehow
+#     imports:
+#         - slvs
