@@ -33,6 +33,7 @@ args=
 run=
 sudo=
 rebuild=
+py3=
 while test $1; do
     arg=$1
     case "$arg" in
@@ -40,6 +41,9 @@ while test $1; do
             remote=${arg#*=}
             shift
             continue
+            ;;
+        py3)
+            py3=1
             ;;
         sudo)
             sudo=sudo
@@ -82,6 +86,9 @@ while test $1; do
             ;;
         build)
             build=1
+            ;;
+        prepare)
+            build=0
             ;;
         package)
             build=3
@@ -127,6 +134,10 @@ prepare_remote() {
     echo "#!/bin/bash" > tmp.sh
     chmod +x tmp.sh
     set +x
+    if test -z "$FMK_CONDA_IMG_NAME"; then
+        date=$(date +%Y%m%d)
+        export FMK_CONDA_IMG_NAME=FreeCAD-$img_name-Conda-Py3-Qt5-$date.glibc2.12-x86_64
+    fi
     env | while read -r line; do
         if [ "${line:0:4}" = FMK_ ]; then
             echo "export ${line%=*}=\"${line#*=}\"" >> tmp.sh
@@ -227,8 +238,8 @@ if test $remote; then
 
     # pipe current directory (excluding the build directory) through
     # tar -> ssh -> remote tar, and then run the script remotely
-    find . \( -path ./build -o -path ./.git \) -prune -o -print0 |
-        tar --exclude='./build' --exclude './.git' -c --null -T - |
+    #
+    tar --exclude='./.git' --exclude='./build' -c . |
         ssh $host -C "mkdir -p $path;cd $path;tar xvf -;./tmp.sh"
 
     [ $build -gt 1 ] || exit
@@ -293,99 +304,153 @@ export FMK_REPO_HASH=${hash:0:8}
 
 # check for windows building
 if [ "$PROGRAMFILES" != "" ]; then 
+
     pushd ../
     if [ "$PROCESSOR_ARCHITECTURE" != "AMD64" ]; then
         echo "only support building on Windows x64"
         exit 1
     fi
 
+    # cmake=${FMK_CMAKE_EXE:=`echo /cygdrive/c/program\ files/*/bin/cmake.exe`}
+    # if ! test -e "$cmake"; then
+    #     echo "CMAKE_EXE not set properly"
+    #     exit 1
+    # fi
+
     echo 'building for windows...'
 
-    cmake=${FMK_CMAKE_EXE:=`echo /cygdrive/c/program\ files/*/bin/cmake.exe`}
-    if ! test -e "$cmake"; then
-        echo "CMAKE_EXE not set properly"
-        exit 1
-    fi
+    get_cmake() {
+        mkdir -p tools
+        cmake_ver=$1
+        cmake_name=cmake-$cmake_ver-win64-x64
+        cmake=$PWD/tools/$cmake_name/bin/cmake.exe
+        if ! test -e $cmake; then
+            rm -rf tools/$cmake_name
+            wget -c https://github.com/Kitware/CMake/releases/download/v$cmake_ver/$cmake_name.zip
+            (cd tools && 7z x ../$cmake_name.zip)
+        fi
+    }
 
-    if ! test -d libpack; then
+    if test $py3; then
+
+        get_cmake "3.14.5"
+
+        url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19_pre/FreeCADLibs_12.1.2_x64_VC15.7z}
+        vs=15
+        vs_name="15 2017"
+        if ! test -d libpack$vs; then
+            wget -c $url -O libpack$vs.7z
+            mkdir -p libpack$vs
+            (cd libpack$vs && 7z x ../libpack$vs.7z)
+        fi
+
+        build_name="Py3-Qt5"
+    else
+        get_cmake "3.10.3"
+
         # url=${FMK_LIBPACK_URL:=https://github.com/sgrogan/FreeCAD/releases/download/0.17-med-test/FreeCADLibs_11.5.3_x64_VC12.7z}
         url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD-ports-cache/releases/download/v0.18/FreeCADLibs_11.11_x64_VC12.7z}
-        wget -c $url -O libpack.7z
-        7z x libpack.7z
-        mv FreeCADLibs* libpack
+        vs=
+        vs_name="12 2013"
+        if ! test -d libpack; then
+            wget -c $url -O libpack.7z
+            7z x libpack.7z
+            mv FreeCADLibs* libpack
+        fi
+
+        build_name="Py2-Qt4"
     fi
+
+    libpack=$(cygpath -w $PWD/libpack$vs)
+
     popd
 
-    mkdir -p tmp
-    rm -rf tmp/* FreeCAD-*-Win64
+    mkdir -p repo/build$vs
+    pushd repo/build$vs
 
-    mkdir -p repo/build
-    pushd repo/build
-    libpack=../../../libpack
     if ! test -f FreeCAD_trunk.sln; then
-        "$cmake" .. -DFREECAD_LIBPACK_DIR=$libpack  \
-            -DOCC_INCLUDE_DIR=$libpack/include/opencascade -G "Visual Studio 12 2013 Win64"
-    fi
-    if ! test -d bin; then
-        set +x
-        dir=$PWD
-        pushd $libpack/bin
-        exclude=bin_exclude.lst
-        rm -f $exclude
-        echo "generate exclude file list..."
-        find . -name '*.*' -print0 |
-        while IFS= read -r -d '' file; do
-            # filter <prefix>d.<ext> if <prefix>.<ext> exists
-            #    or <prefix>_d.<ext> if <prefix>.<ext> exists
-            #
-            # TODO: this two conditions should be able to shorten using
-            # optional character matching in regex, e.g. ${file%%?(_)d.dll}.
-            # Strangely, it works only in terminal but not in script! Why??!!
-
-            ext="${file: -3}"
-            if [ "${file%-gd-*\.dll}" != "$file" ] || \
-               test -f ${file%[Dd]\.$ext}.$ext || \
-               test -f ${file%_[Dd]\.$ext}.$ext;
-            then
-                echo "$file" >> $exclude
-            fi
-        done
-        echo "copying bin directory..."
-        mkdir -p $dir/bin
-        tar --exclude 'h5*.exe' --exclude 'Qt*d4.dll' --exclude 'swig*' --exclude "*.pyc" \
-            --exclude 'boost*-gd-*.dll' --exclude "*.pdb" -X $exclude -cf - . |
-            (cd $dir/bin && tar xvBf -)
-        set -x
-
-        popd
+        export FREECAD_LIBPACK_DIR=$libpack
+        "$cmake" \
+            -G "Visual Studio $vs_name Win64" \
+            -DFREECAD_LIBPACK_DIR=$libpack \
+            -DOCC_INCLUDE_DIR=$libpack/include/opencascade \
+            ..
     fi
 
     [ $build -gt 0 ] || exit
     
-    if test -f ../src/Build/Version.h && \
-        ! cmp -s ../src/Build/Version.h src/Build/Version.h; then
-        rm -rf src/Build/*
-        mkdir -p src/Build
-        cp ../src/Build/Version.h src/Build
+    if [ $build -ne 3 ]; then
+        if test -f ../src/Build/Version.h && \
+            ! cmp -s ../src/Build/Version.h src/Build/Version.h; then
+            rm -rf src/Build/*
+            mkdir -p src/Build
+            cp ../src/Build/Version.h src/Build
+        fi
+
+        # get cpu core count
+        ncpu=$(grep -c ^processor /proc/cpuinfo)
+
+        # start building
+        "$cmake" --build . --config Release -- /maxcpucount:$ncpu
     fi
-
-    # get cpu core count
-    ncpu=$(grep -c ^processor /proc/cpuinfo)
-
-    # start building
-    "$cmake" --build . --config Release -- /maxcpucount:$ncpu
 
     [ $build -gt 1 ] || exit
 
+    tmpdir=$PWD/../../tmp
+    mkdir -p $tmpdir
+    rm -rf $tmpdir/* ../../FreeCAD-$img_name*
+
+    # copy `bin` folder from libpack
+
+    pushd $libpack/bin
+    exclude=bin_exclude.lst
+    rm -f $exclude
+    echo "generate exclude file list..."
+
+    set +x
+    find . -name '*.*' -print0 |
+    while IFS= read -r -d '' file; do
+        # filter <prefix>d.<ext> if <prefix>.<ext> exists
+        #    or <prefix>_d.<ext> if <prefix>.<ext> exists
+        #
+        # TODO: this two conditions should be able to shorten using
+        # optional character matching in regex, e.g. ${file%%?(_)d.dll}.
+        # Strangely, it works only in terminal but not in script! Why??!!
+
+        ext="${file: -3}"
+        if [ "${file%-g*d-*\.dll}" != "$file" ] || \
+            [ -f "${file%[Dd]\.$ext}.$ext" ] || \
+            [ -f "${file%_[Dd]\.$ext}.$ext" ];
+        then
+            echo "$file" >> $exclude
+        fi
+    done
+    echo "copying bin directory..."
+    mkdir -p $tmpdir/bin
+    tar --exclude 'h5*.exe' --exclude 'swig*' --exclude "*.pyc" \
+        --exclude 'Qt*d4.dll' --exclude 'Qt*d5.dll' --exclude "*.pdb" \
+        -X $exclude -cf - . | (cd $tmpdir/bin && tar xvBf -)
+    set -x
+    popd
+
+    extra_dirs="plugins resources qml"
+    for p in $extra_dirs; do
+        if test -d $libpack/$p; then
+            cp -a $libpack/$p $tmpdir
+        fi
+    done
+
     # copy out the result to tmp directory
-    tar --exclude '*.pyc' -cf - bin Mod Ext data | (cd ../../tmp && tar xvBf -)
-    cd ../../tmp
+    tar --exclude '*.pyc' --exclude '*.pdb' -cf - bin Mod Ext data | (cd $tmpdir && tar xvBf -)
+
+    cd $tmpdir
 
     # install personal workbench. This script will write version string to
     # ../VERSION file
     ../../../installwb.sh
     cd ..
-    name=FreeCAD-`cat VERSION`-Win64
+    date=$(date +%Y%m%d)
+    name=FreeCAD-$img_name-Win64-$build_name-$date
 
     # archive the result
     mv tmp $name
@@ -404,8 +469,12 @@ if [ $(uname) = 'Darwin' ]; then
         conda_path=env
         . ./recipes/setup.sh
 
+        if test -z $rebuild; then
+            conda_cmd+=" --dirty"
+        fi
+
         if [ $build -ne 3 ]; then
-            $conda_cmd --dirty --no-remove-work-dir --keep-old-work $conda_recipes
+            $conda_cmd --no-remove-work-dir --keep-old-work $conda_recipes
         fi
         if [ $build -gt 0 ]; then
             cd recipes
@@ -420,7 +489,7 @@ if [ $(uname) = 'Darwin' ]; then
             ver=$(conda run -p $base_path python get_freecad_version.py)
 
             date=$(date +%Y%m%d)
-            out=../../../out/FreeCAD-$img_name-Conda-Py3Qt5-$date-$ver
+            out=../../../out/FreeCAD-$img_name-OSX-Conda-Py3-Qt5-$date-x86_64
             rm -f $out
             hdiutil create -fs HFS+ -srcfolder "$app_path" $out
         fi
@@ -488,7 +557,9 @@ if [ $(uname) = 'Darwin' ]; then
 
     ../../../../installwb.sh
 
-    name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
+    # name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
+    date=$(date +%Y%m%d)
+    name=FreeCAD-$img_name-OSX-Py2-Qt5-$date-x86_64
     echo $name
     rm -f ../../../out/$name.dmg
     hdiutil create -fs HFS+ -srcfolder "$APP_PATH" ../../../out/$name.dmg
@@ -500,7 +571,7 @@ fi
 if test $conda; then
     docker_name=$conda
     date=$(date +%Y%m%d)
-    conda_img_name="FreeCAD-$img_name-Conda-Py3Qt5-$date-glibc2.12-x86_64"
+    conda_img_name="FreeCAD-$img_name-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
 
     $sudo docker build -t $conda - << EOS
 FROM condaforge/linux-anvil-comp7
@@ -526,8 +597,11 @@ EOS
     fi
 
     if [ $build -ne 3 ]; then
-        cmd+="&& conda build --dirty --no-remove-work-dir --keep-old-work \
-                    --cache-dir ./cache $conda_recipes"
+        cmd+="&& conda build --no-remove-work-dir --keep-old-work --cache-dir ./cache"
+        if test -z $rebuild; then
+            cmd+=" --dirty "
+        fi
+        cmd+="$conda_recipes"
     fi
     if [ $build -gt 1 ]; then
         appdir=${FMK_CONDA_APPDIR:="AppDir_asm3"}
@@ -576,6 +650,15 @@ if [ $build -gt 1 ]; then
     cd AppImages
     # now generate the AppImage using the recipe
     DEBDIR="$PWD/.." ARCH=x86_64 ./pkg2appimage ../$aimg_recipe
-    mv out/FreeCAD-$img_name*.AppImage ../../out/
+
+    date=$(date +%Y%m%d)
+    if [ $dist = bionic ]; then
+        build_name=Bionic-Py3n2-Qt5
+    else
+        build_name=Xenial-Py2-Qt4
+    fi
+    name=$(echo out/FreeCAD-$img_name*.AppImage)
+    ext=${name#*glibc}
+    mv $name ../../out/FreeCAD-$img_name-$build_name-$date.glibc$ext
 fi
 
