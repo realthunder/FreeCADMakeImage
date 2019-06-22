@@ -4,19 +4,71 @@ set -ex
 
 print_usage() {
     cat <<EOF
-usage: $0 [remote=<host:path>] [rebuild|build]
+usage: $0 [remote=<host:path>] [rebuild] [prepare|build|package] \\
+                [dist=<xenial|bionic>] [dist-ver=<ubuntu version>] \\
+                [docker|conda ...]
 
-remote: copy this repository through ssh to host:path, and then run on remote
-        host
+remote: copy this repository through ssh to host:path, and then run the script
+        on remote host, copy back built output image, and delete the image on
+        remote host.
 
 rebuild: delete any previously built source and binary package, and rebuild
 
-build: build deb package with pbuilder, or on Windows build with cmake --build
+prepare|build|package:
 
-If no [rebuild|build] specified, the default behavior is to make sure
-repo is up to date, and deb package is built, and then build the AppImage.
+    prepare: prepare the building env and source tree without compiling
 
-If everything runs fine, the final result will be located at build/out
+    build: compile only without packaging
+
+    package: package only without compiling
+
+If no [prepare|build|package] specified, the default behavior is to make sure
+repo is up to date, compile if updated, and then make the package.
+
+If everything runs fine, the final result will be located in build/out
+
+dist: when doing linux build, this specifies the target distribution, currently
+      only support xenial or bionic, default to bionic
+
+dist-ver: specify the exact distribution version, only used when building linux
+          AppImage using docker, for pulling the exact docker image.
+
+docker[=<docker_image_name>]: specify building linux AppImage using docker. You
+                              can optional set a customized name for the docker
+                              image, e.g. docker=my-docker. If not given the
+                              default docker image name is <dist>-fc-dev. So
+                              for bionic distribution, the name is bionic-fc-dev.
+                              When building docker with docker, the following
+                              optional arguments are supported,
+
+    dockerfile=<path to Dockfile>: optional customized docker image recipe.
+
+    sudo: use sudo to run docker command
+
+    run[=<path_to_app_image>]: instead of building, run an AppImage using the
+                               docker image.  If no path to image is given, it
+                               launches the docker container with the bash
+                               shell. The home directory is mapped into the
+                               container as /shared.
+
+conda[=<conda_docker_name>]: build and package using conda-build. On linux, the
+                             conda envionment runs inside a docker container.
+                             And you can supply an optional docker image name
+                             for that, default to 'conda-fc-dev'. On MacOSX,
+                             conda is used natively. 
+                             
+                             The following additional arguments are supported,
+
+    conda-recipes=<path_to_recipies>: conda recipes to build. If more than one
+                                      recipe is given, separate them with space
+                                      and use quote. If no recipes is given, it
+                                      builds all recipes in 'conda' directory.
+
+    sudo: in case of running conda inside docker, you may have to launch the
+          docker container using sudo.
+
+py3: specify building FreeCAD python3. This argument is only used when building
+     windows package, which uses the newer Libpack 12 with Visual Studio 2017.
 EOF
 }
 
@@ -92,6 +144,10 @@ while test $1; do
             ;;
         package)
             build=3
+            ;;
+        help)
+            print_usage
+            exit
             ;;
         *)
             print_usage
@@ -273,10 +329,10 @@ if test $conda; then
     build_dir=conda/$img_name
 else
     build_dir=$img_name
-fi
 
-if test $rebuild; then
-    rm -rf build/$build_dir
+    if test $rebuild; then
+        rm -rf build/$build_dir
+    fi
 fi
 
 mkdir -p build/$build_dir
