@@ -9,7 +9,7 @@ image_name=${FMK_CONDA_IMG_NAME:="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"}
 conda create \
     -p $appdir \
     calculix blas=*=openblas git gitpython \
-    numpy matplotlib scipy sympy pandas six pyyaml jinja2 \
+    numpy matplotlib scipy sympy pandas six pyyaml \
     qt \
     occt \
     --copy \
@@ -53,6 +53,19 @@ cp bin_tmp/pyside2-rcc bin/
 sed -i.bak -e '1s|.*|#!/usr/bin/env python|' bin/pip && rm bin/pip.bak
 rm -rf bin_tmp
 
+# we use qt.conf for qt binary relocation. The one inside `bin` is for FreeCAD,
+# and another one in `libexec` for QWebEngineProcess, which runs as a separate
+# process.
+cat > bin/qt.conf << EOS
+[Paths]
+Prefix = ./../
+EOS
+cp bin/qt.conf libexec/
+
+if ! test $appimage; then
+    exit
+fi
+
 replace_path_gen() {
     local path="$1"
     local postfix="$2"
@@ -70,32 +83,19 @@ replace_path_gen() {
     echo "$res$postfix"
 }
 
-if ! test $appimage; then
-    exit
-fi
-
 # Conda installation puts lots of hard coded aboslute path of the installed
 # location. The following code is used to replace it with a relative path
 # calculated from `bin`. We also make sure to cd to `bin` before starting
 # FreeCAD, which is done in AppRun script. 
 #
-# This solution is probably not as elegant as the one below to solve the
-# QWebEngineProcess issue, however, changing the path here also solves the
+# This solution is probably not as elegant as using qt.conf above for
+# relocation, however, changing the path here also solves the
 # XmbTextListToTextProperty error message.
 #
 
 app_path="$PWD/"
 app_path_rpl=$(replace_path_gen "$app_path" ../)
 find . -type f -exec sed -i -e "s@$app_path@$app_path_rpl@g" {} \;
-
-# Alternative to the above solution, we can use qt.conf for relocation. The one
-# inside `bin` is for FreeCAD, and another one in `libexec` for
-# QWebEngineProcess, which runs as a separate process.
-cat > bin/qt.conf << EOS
-[Paths]
-Prefix = ./../
-EOS
-cp bin/qt.conf libexec/
 
 popd
 

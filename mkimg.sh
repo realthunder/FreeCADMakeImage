@@ -533,8 +533,10 @@ if [ $(uname) = 'Darwin' ]; then
             $conda_cmd --no-remove-work-dir --keep-old-work $conda_recipes
         fi
         if [ $build -gt 0 ]; then
+            date=$(date +%Y%m%d)
+            app_path=FreeCAD-$img_name-OSX-Conda-Py3-Qt5-$date-x86_64
             cd recipes
-            app_path=MacBundle
+            cp -a MacBundle $app_path
             base_path=$app_path/FreeCAD.app/Contents/Resources
             ./install.sh $base_path
 
@@ -542,12 +544,12 @@ if [ $(uname) = 'Darwin' ]; then
             export FMK_REPO_VER_PATH="$base_path/VERSION"
             ../../../../installwb.sh
 
-            ver=$(conda run -p $base_path python get_freecad_version.py)
+            # ver=$(conda run -p $base_path python get_freecad_version.py)
 
             date=$(date +%Y%m%d)
-            out=../../../out/FreeCAD-$img_name-OSX-Conda-Py3-Qt5-$date-x86_64
+            out=../../../out/$app_path
             rm -f $out
-            hdiutil create -fs HFS+ -srcfolder "$app_path" $out
+            hdiutil create -fs HFS+ -srcfolder $app_path $out
         fi
         exit
     fi
