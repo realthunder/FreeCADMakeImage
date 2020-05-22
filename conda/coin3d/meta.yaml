@@ -1,0 +1,77 @@
+{% set name = "coin3d" %}
+{% set version = "4.0.0" %}
+{% set sha256 = "b00d2a8e9d962397cf9bf0d9baa81bcecfbd16eef675a98c792f5cf49eb6e805" %}
+{% set version_superglue = "1.3.0" %}
+{% set sha256_superglue = "f408adcfb706e7c781db9c218ef9e8ba56d43995ccb61dffad5f6154c34f17d6" %}
+
+package:
+    name: {{ name }}
+    version: {{ version }}
+
+source:
+    - url: https://github.com/coin3d/coin/archive/Coin-{{ version }}.tar.gz
+      sha256: {{ sha256 }}
+      patches:
+        - 0001-cpack.d-is-now-optional.patch
+
+    - url: https://github.com/coin3d/superglu/archive/superglu-{{ version_superglue }}.tar.gz
+      sha256: {{ sha256_superglue }}
+      folder: superglue
+      patches:
+        - superglue.patch
+
+build:
+    number: 1009
+    skip: true  # [win and py<35]
+
+requirements:
+    build:
+        - {{ compiler('cxx') }}
+        - {{ cdt('mesa-libgl-devel') }}  # [linux]
+        - {{ cdt('mesa-dri-drivers') }}  # [linux]
+        - {{ cdt('libxdamage') }}  # [linux]
+        - {{ cdt('libselinux') }}  # [linux]
+        - {{ cdt('libXxf86vm') }}  # [linux]
+        - cmake
+        - ninja
+    host:
+        - boost-cpp
+        - libglu  # [linux]
+        - xorg-libxt  # [linux]
+        - xorg-libxi  # [linux]
+        - expat
+    run:
+        - boost-cpp
+        - libglu  # [linux]
+        - xorg-libxt  # [linux]
+        - xorg-libxi  # [linux]
+        - expat
+
+test:
+    requires:
+        - {{ cdt('mesa-libgl-devel') }}  # [linux]
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+    files:
+        - test.cpp  # [linux]
+    commands:
+        - ${CXX} -o test test.cpp -Wl,-rpath-link -lCoin -L${PREFIX}/lib/ -I${PREFIX}/include/  # [linux]
+        - ./test  # [linux]
+        - where /r "%PREFIX%"  Coin4.dll  # [win]
+        - test -f ${PREFIX}/lib/libCoin.dylib  # [osx]
+
+about:
+    home: https://bitbucket.org/Coin3D/coin/wiki/Home
+    license: BSD 3-Clause
+    license_family: BSD
+    license_file: COPYING
+    summary: Coin3D is a c++ high-level 3D graphics toolkit.
+    description: Coin3D is a high-level, retained-mode toolkit 
+                 for effective 3D graphics development.
+                 It is API compatible with Open Inventor 2.1.
+    doc_url: https://bitbucket.org/Coin3D/coin/wiki/Home
+    dev_url: https://bitbucket.org/Coin3D/coin/wiki/Home
+
+extra:
+    recipe-maintainers:
+        - looooo

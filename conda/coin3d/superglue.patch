@@ -1,0 +1,13 @@
+diff --git a/superglu-config.cmake.in b/superglu-config.cmake.in
+index 8bccecd..bfa7fc9 100644
+--- a/superglu-config.cmake.in
++++ b/superglu-config.cmake.in
+@@ -43,7 +43,7 @@ set(@PROJECT_NAME@_LIBRARY @PROJECT_NAME@::GLU)
+ get_property(@PROJECT_NAME@_LIBRARIES TARGET @PROJECT_NAME@::GLU PROPERTY INTERFACE_LINK_LIBRARIES)
+ set(@PROJECT_NAME@_LIBRARIES @PROJECT_NAME@::GLU ${@PROJECT_NAME@_LIBRARIES})
+ 
+-set_and_check(@PROJECT_NAME@_LIBRARY_DIRS "@PACKAGE_CMAKE_INSTALL_LIBDIR@")
++set_and_check(@PROJECT_NAME@_LIBRARY_DIRS "@CMAKE_INSTALL_LIBDIR@")
+ set(@PROJECT_NAME@_LIBRARY_DIR ${@PROJECT_NAME@_LIBRARY_DIRS})
+ 
+ # For backwards compatibility define upper case versions of output variables

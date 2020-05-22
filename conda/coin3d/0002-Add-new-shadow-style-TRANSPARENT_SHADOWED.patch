@@ -1,0 +1,598 @@
+From d489cde9d79917b7defd2bdeb96ade0bfd3c63b6 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Thu, 21 May 2020 15:23:41 +0800
+Subject: [PATCH 1/2] Add new shadow style TRANSPARENT_SHADOWED
+
+It is the same as SHADOWED except when the object is completely
+transparent, then the shadowed the part will override the transparency
+to what's set in SoShadowTransparencyElement::transparency. Node
+SoShadowTransparency can be used to customize the tranparency.
+
+For the current impelementation, if you want to customize shadow
+transparency, you must put the SoShadowTransparency node before the
+SoShadowStyle node with the TRANSPARENT_SHADOWED style.
+---
+ .../FXViz/elements/SoShadowStyleElement.h     |   3 +-
+ .../elements/SoShadowTransparencyElement.h    |  57 ++++++++
+ .../annex/FXViz/nodes/SoShadowStyle.h         |   3 +-
+ .../annex/FXViz/nodes/SoShadowTransparency.h  |  57 ++++++++
+ src/shadows/CMakeLists.txt                    |   2 +
+ src/shadows/SoShadowGroup.cpp                 |  35 ++++-
+ src/shadows/SoShadowStyle.cpp                 |   9 +-
+ src/shadows/SoShadowTransparency.cpp          | 116 +++++++++++++++++
+ src/shadows/SoShadowTransparencyElement.cpp   | 122 ++++++++++++++++++
+ 9 files changed, 400 insertions(+), 4 deletions(-)
+ create mode 100644 include/Inventor/annex/FXViz/elements/SoShadowTransparencyElement.h
+ create mode 100644 include/Inventor/annex/FXViz/nodes/SoShadowTransparency.h
+ create mode 100644 src/shadows/SoShadowTransparency.cpp
+ create mode 100644 src/shadows/SoShadowTransparencyElement.cpp
+
+diff --git a/include/Inventor/annex/FXViz/elements/SoShadowStyleElement.h b/include/Inventor/annex/FXViz/elements/SoShadowStyleElement.h
+index 361367647..17eab0898 100644
+--- a/include/Inventor/annex/FXViz/elements/SoShadowStyleElement.h
++++ b/include/Inventor/annex/FXViz/elements/SoShadowStyleElement.h
+@@ -49,7 +49,8 @@ public:
+     NO_SHADOWING = 0x0, 
+     CASTS_SHADOW = 0x1, 
+     SHADOWED     = 0x2,
+-    CASTS_SHADOW_AND_SHADOWED = CASTS_SHADOW|SHADOWED 
++    CASTS_SHADOW_AND_SHADOWED = CASTS_SHADOW|SHADOWED,
++    TRANSPARENT_SHADOWED = 0x4|SHADOWED 
+   };
+   
+   virtual void init(SoState * state);
+diff --git a/include/Inventor/annex/FXViz/elements/SoShadowTransparencyElement.h b/include/Inventor/annex/FXViz/elements/SoShadowTransparencyElement.h
+new file mode 100644
+index 000000000..52affc991
+--- /dev/null
++++ b/include/Inventor/annex/FXViz/elements/SoShadowTransparencyElement.h
+@@ -0,0 +1,57 @@
++#ifndef COIN_SOSHADOWTRANSPARENCYELEMENT_H
++#define COIN_SOSHADOWTRANSPARENCYELEMENT_H
++
++/**************************************************************************\
++ * Copyright (c) Zheng, Lei (realthunder) <realthunder.dev@gmail.com>
++ * All rights reserved.
++ * 
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are
++ * met:
++ * 
++ * Redistributions of source code must retain the above copyright notice,
++ * this list of conditions and the following disclaimer.
++ * 
++ * Redistributions in binary form must reproduce the above copyright
++ * notice, this list of conditions and the following disclaimer in the
++ * documentation and/or other materials provided with the distribution.
++ * 
++ * Neither the name of the copyright holder nor the names of its
++ * contributors may be used to endorse or promote products derived from
++ * this software without specific prior written permission.
++ * 
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++\**************************************************************************/
++
++#include <Inventor/elements/SoFloatElement.h>
++
++class COIN_DLL_API SoShadowTransparencyElement : public SoFloatElement {
++  typedef SoFloatElement inherited;
++
++  SO_ELEMENT_HEADER(SoShadowTransparencyElement);
++public:
++  static void initClass(void);
++protected:
++  virtual ~SoShadowTransparencyElement();
++
++public:
++  virtual void init(SoState * state);
++
++  static  void set(SoState * const state, SoNode * const node,
++                   const float value);
++  static void set(SoState * const state, const float value);
++  static float get(SoState * const state);
++  static float getDefault(void);
++};
++
++#endif // !COIN_SOSHADOWTRANSPARENCYELEMENT_H
+diff --git a/include/Inventor/annex/FXViz/nodes/SoShadowStyle.h b/include/Inventor/annex/FXViz/nodes/SoShadowStyle.h
+index 8ef4f8cdd..abc541194 100644
+--- a/include/Inventor/annex/FXViz/nodes/SoShadowStyle.h
++++ b/include/Inventor/annex/FXViz/nodes/SoShadowStyle.h
+@@ -50,7 +50,8 @@ public:
+     NO_SHADOWING = SoShadowStyleElement::NO_SHADOWING, 
+     CASTS_SHADOW = SoShadowStyleElement::CASTS_SHADOW, 
+     SHADOWED = SoShadowStyleElement::SHADOWED, 
+-    CASTS_SHADOW_AND_SHADOWED = SoShadowStyleElement::CASTS_SHADOW_AND_SHADOWED 
++    CASTS_SHADOW_AND_SHADOWED = SoShadowStyleElement::CASTS_SHADOW_AND_SHADOWED,
++    TRANSPARENT_SHADOWED = SoShadowStyleElement::TRANSPARENT_SHADOWED 
+   };
+   
+   SoSFEnum style;
+diff --git a/include/Inventor/annex/FXViz/nodes/SoShadowTransparency.h b/include/Inventor/annex/FXViz/nodes/SoShadowTransparency.h
+new file mode 100644
+index 000000000..e764fd767
+--- /dev/null
++++ b/include/Inventor/annex/FXViz/nodes/SoShadowTransparency.h
+@@ -0,0 +1,57 @@
++#ifndef COIN_SOSHADOWTRANSPARENCY_H
++#define COIN_SOSHADOWTRANSPARENCY_H
++
++/**************************************************************************\
++ * Copyright (c) Zheng, Lei (realthunder) <realthunder.dev@gmail.com>
++ * All rights reserved.
++ * 
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are
++ * met:
++ * 
++ * Redistributions of source code must retain the above copyright notice,
++ * this list of conditions and the following disclaimer.
++ * 
++ * Redistributions in binary form must reproduce the above copyright
++ * notice, this list of conditions and the following disclaimer in the
++ * documentation and/or other materials provided with the distribution.
++ * 
++ * Neither the name of the copyright holder nor the names of its
++ * contributors may be used to endorse or promote products derived from
++ * this software without specific prior written permission.
++ * 
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++\**************************************************************************/
++
++#include <Inventor/nodes/SoSubNode.h>
++#include <Inventor/fields/SoSFFloat.h>
++#include <Inventor/annex/FXViz/elements/SoShadowTransparencyElement.h>
++
++class COIN_DLL_API SoShadowTransparency : public SoNode {
++  typedef SoNode inherited;
++
++  SO_NODE_HEADER(SoShadowTransparency);
++
++public:
++  static void initClass(void);
++  SoShadowTransparency(void);
++
++  SoSFFloat transparency;
++
++  virtual void GLRender(SoGLRenderAction * action);
++
++protected:
++  virtual ~SoShadowTransparency();
++};
++
++#endif // !COIN_SOSHADOWTRANSPARENCY_H
+diff --git a/src/shadows/CMakeLists.txt b/src/shadows/CMakeLists.txt
+index 1eef22634..0fd896563 100644
+--- a/src/shadows/CMakeLists.txt
++++ b/src/shadows/CMakeLists.txt
+@@ -2,9 +2,11 @@
+ set(COIN_SHADOWS_FILES
+ 	SoShadowGroup.cpp
+ 	SoShadowStyle.cpp
++	SoShadowTransparency.cpp
+ 	SoShadowSpotLight.cpp
+ 	SoShadowDirectionalLight.cpp
+ 	SoShadowStyleElement.cpp
++    SoShadowTransparencyElement.cpp
+ 	SoShadowCulling.cpp
+ 	SoGLShadowCullingElement.cpp
+ )
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index d4efd981b..1842e3f3f 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -309,8 +309,10 @@
+ #include <Inventor/elements/SoEnvironmentElement.h>
+ #include <Inventor/elements/SoClipPlaneElement.h>
+ #include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
++#include <Inventor/annex/FXViz/elements/SoShadowTransparencyElement.h>
+ #include <Inventor/annex/FXViz/elements/SoGLShadowCullingElement.h>
+ #include <Inventor/annex/FXViz/nodes/SoShadowStyle.h>
++#include <Inventor/annex/FXViz/nodes/SoShadowTransparency.h>
+ #include <Inventor/annex/FXViz/nodes/SoShadowCulling.h>
+ #include <Inventor/annex/FXViz/nodes/SoShadowSpotLight.h>
+ #include <Inventor/annex/FXViz/nodes/SoShadowDirectionalLight.h>
+@@ -622,6 +624,7 @@ public:
+     texunit1(NULL),
+     lightmodel(NULL),
+     twosided(NULL),
++    shadowalpha(NULL),
+     numtexunitsinscene(1),
+     hasclipplanes(FALSE),
+     subgraphsearchenabled(TRUE)
+@@ -647,6 +650,7 @@ public:
+     if (this->twosided) this->twosided->unref();
+     if (this->texunit0) this->texunit0->unref();
+     if (this->texunit1) this->texunit1->unref();
++    if (this->shadowalpha) this->shadowalpha->unref();
+     if (this->vertexshadercache) this->vertexshadercache->unref();
+     if (this->fragmentshadercache) this->fragmentshadercache->unref();
+     if (this->cameratransform) this->cameratransform->unref();
+@@ -745,6 +749,7 @@ public:
+   SoShaderParameter1i * texunit1;
+   SoShaderParameter1i * lightmodel;
+   SoShaderParameter1i * twosided;
++  SoShaderParameter1f * shadowalpha;
+ 
+   int numtexunitsinscene;
+   SbBool hasclipplanes;
+@@ -809,8 +814,10 @@ SoShadowGroup::init(void)
+ {
+   SoShadowGroup::initClass();
+   SoShadowStyleElement::initClass();
++  SoShadowTransparencyElement::initClass();
+   SoGLShadowCullingElement::initClass();
+   SoShadowStyle::initClass();
++  SoShadowTransparency::initClass();
+   SoShadowSpotLight::initClass();
+   SoShadowDirectionalLight::initClass();
+   SoShadowCulling::initClass();
+@@ -1820,7 +1827,15 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     }
+   }
+ 
+-  gen.addMainStatement("color = vec3(clamp(color.r, 0.0, 1.0), clamp(color.g, 0.0, 1.0), clamp(color.b, 0.0, 1.0));");
++  gen.addMainStatement("if (shadow_alpha != 0.0 && mydiffuse.a == 0.0 && shadeFactor < 1.0) {"
++                            "mydiffuse.a = shadow_alpha;"
++                            "color = vec3(clamp(color.r, 0.0, mydiffuse.r),"
++                                         "clamp(color.g, 0.0, mydiffuse.g),"
++                                         "clamp(color.b, 0.0, mydiffuse.b));}\n"
++                      "else color = vec3(clamp(color.r, 0.0, 1.0),"
++                                        "clamp(color.g, 0.0, 1.0),"
++                                        "clamp(color.b, 0.0, 1.0));");
++
+   gen.addMainStatement("if (coin_light_model != 0) { color *= texcolor.rgb; color += scolor; }\n"
+                        "else color = mydiffuse.rgb * texcolor.rgb;\n");
+ 
+@@ -1853,6 +1868,7 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   gen.addMainStatement("gl_FragColor = vec4(color, mydiffuse.a);");
+   gen.addDeclaration("uniform sampler2D textureMap0;\n", FALSE);
+   gen.addDeclaration("uniform int coin_texunit0_model;\n", FALSE);
++  gen.addDeclaration("uniform float shadow_alpha;\n", FALSE);
+   if (this->numtexunitsinscene > 1) {
+     gen.addDeclaration("uniform int coin_texunit1_model;\n", FALSE);
+     gen.addDeclaration("uniform sampler2D textureMap1;\n", FALSE);
+@@ -1909,6 +1925,13 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+ 
+   SoShaderParameter1i * texmap1 = NULL;
+ 
++  if (!this->shadowalpha) {
++    this->shadowalpha = new SoShaderParameter1f;
++    this->shadowalpha->ref();
++    this->shadowalpha->name = "shadow_alpha";
++    this->shadowalpha->value = 1.0f;
++  }
++
+   if (!this->texunit0) {
+     this->texunit0 = new SoShaderParameter1i;
+     this->texunit0->ref();
+@@ -1936,6 +1959,7 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     this->lightmodel->name = "coin_light_model";
+     this->lightmodel->value = 1;
+   }
++  this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), this->shadowalpha);
+   this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), texmap);
+   if (texmap1) this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), texmap1);
+   this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), this->texunit0);
+@@ -2103,6 +2127,15 @@ SoShadowGroupP::shader_enable_cb(void * closure,
+       cc_glglue_glActiveTexture(glue, GL_TEXTURE0);
+     }
+   }
++  if (enable) {
++    float alpha = 1.0f;
++    if (SoShadowStyleElement::get(state) == SoShadowStyleElement::TRANSPARENT_SHADOWED)
++      alpha = 1.0f - SoShadowTransparencyElement::get(state);
++    if (thisp->shadowalpha && thisp->shadowalpha->value.getValue() != alpha) {
++      thisp->shadowalpha->value = alpha;
++      thisp->fragmentshader->updateParameters(state);
++    }
++  }
+ }
+ 
+ bool
+diff --git a/src/shadows/SoShadowStyle.cpp b/src/shadows/SoShadowStyle.cpp
+index e2027e10c..9299c0775 100644
+--- a/src/shadows/SoShadowStyle.cpp
++++ b/src/shadows/SoShadowStyle.cpp
+@@ -111,6 +111,7 @@ SoShadowStyle::SoShadowStyle(void)
+   SO_NODE_DEFINE_ENUM_VALUE(Style, CASTS_SHADOW);
+   SO_NODE_DEFINE_ENUM_VALUE(Style, SHADOWED);
+   SO_NODE_DEFINE_ENUM_VALUE(Style, CASTS_SHADOW_AND_SHADOWED);
++  SO_NODE_DEFINE_ENUM_VALUE(Style, TRANSPARENT_SHADOWED);
+   SO_NODE_SET_SF_ENUM_TYPE(style, Style);
+ }
+ 
+@@ -137,13 +138,19 @@ SoShadowStyle::GLRender(SoGLRenderAction * action)
+ {
+   SoState * state = action->getState();
+ 
++  unsigned int prev = SoShadowStyleElement::get(state);
++
+   SoShadowStyleElement::set(state,
+                             this,
+                             (int) this->style.getValue());
+ 
+   if (SoShapeStyleElement::get(state)->getFlags() & SoShapeStyleElement::SHADOWS) {
+-
+     if (this->style.getValue() & SHADOWED) {
++      if (prev != TRANSPARENT_SHADOWED && this->style.getValue() == TRANSPARENT_SHADOWED) {
++        // Make sure to trigger SoShadowGroup shader enable callback, to update
++        // its shader parameters.
++        SoGLShaderProgramElement::enable(state, FALSE);
++      }
+       SoGLShaderProgramElement::enable(state, TRUE);
+     }
+     else {
+diff --git a/src/shadows/SoShadowTransparency.cpp b/src/shadows/SoShadowTransparency.cpp
+new file mode 100644
+index 000000000..b0841ed88
+--- /dev/null
++++ b/src/shadows/SoShadowTransparency.cpp
+@@ -0,0 +1,116 @@
++/**************************************************************************\
++ * Copyright (c) Zheng, Lei (realthunder) <realthunder.dev@gmail.com>
++ * All rights reserved.
++ * 
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are
++ * met:
++ * 
++ * Redistributions of source code must retain the above copyright notice,
++ * this list of conditions and the following disclaimer.
++ * 
++ * Redistributions in binary form must reproduce the above copyright
++ * notice, this list of conditions and the following disclaimer in the
++ * documentation and/or other materials provided with the distribution.
++ * 
++ * Neither the name of the copyright holder nor the names of its
++ * contributors may be used to endorse or promote products derived from
++ * this software without specific prior written permission.
++ * 
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++\**************************************************************************/
++
++/*!
++  \class SoShadowTransparency SoShadowTransparency.h Inventor/annex/FXViz/nodes/SoShadowTransparency.h
++  \brief The SoShadowTransparency class is a node for setting the shadow transparency on nodes.
++
++  \ingroup nodes
++
++  <b>FILE FORMAT/DEFAULTS:</b>
++  \code
++    ShadowTransparency {
++        data 0.5
++    }
++  \endcode
++
++  \since Coin 4.0
++*/
++
++// *************************************************************************
++
++#include <Inventor/annex/FXViz/nodes/SoShadowTransparency.h>
++
++#include <cstdio>
++
++#include <Inventor/actions/SoGLRenderAction.h>
++
++#include "nodes/SoSubNodeP.h"
++// *************************************************************************
++
++// *************************************************************************
++
++
++SO_NODE_SOURCE(SoShadowTransparency);
++
++/*!
++  Constructor.
++*/
++SoShadowTransparency::SoShadowTransparency(void)
++{
++  SO_NODE_INTERNAL_CONSTRUCTOR(SoShadowTransparency);
++  SO_NODE_ADD_FIELD(transparency, (0.2f));
++}
++
++/*!
++  Destructor.
++*/
++SoShadowTransparency::~SoShadowTransparency()
++{
++}
++
++/*!
++  \copydetails SoNode::initClass(void)
++*/
++void
++SoShadowTransparency::initClass(void)
++{
++  SO_NODE_INTERNAL_INIT_CLASS(SoShadowTransparency, SO_FROM_COIN_4_0);
++  SO_ENABLE(SoGLRenderAction, SoShadowTransparencyElement);
++}
++
++// Doc from superclass.
++void
++SoShadowTransparency::GLRender(SoGLRenderAction * action)
++{
++  SoState * state = action->getState();
++
++  SoShadowTransparencyElement::set(state,
++                                   this,
++                                   this->transparency.getValue());
++}
++
++
++
++#ifdef COIN_TEST_SUITE
++
++BOOST_AUTO_TEST_CASE(initialized)
++{
++  SoShadowTransparency * node = new SoShadowTransparency;
++  assert(node);
++  node->ref();
++  BOOST_CHECK_MESSAGE(node->getTypeId() != SoType::badType(),
++                      "missing class initialization");
++  node->unref();
++}
++
++#endif // COIN_TEST_SUITE
+diff --git a/src/shadows/SoShadowTransparencyElement.cpp b/src/shadows/SoShadowTransparencyElement.cpp
+new file mode 100644
+index 000000000..62e65d8da
+--- /dev/null
++++ b/src/shadows/SoShadowTransparencyElement.cpp
+@@ -0,0 +1,122 @@
++/**************************************************************************\
++ * Copyright (c) Zheng, Lei (realthunder) <realthunder.dev@gmail.com>
++ * All rights reserved.
++ * 
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are
++ * met:
++ * 
++ * Redistributions of source code must retain the above copyright notice,
++ * this list of conditions and the following disclaimer.
++ * 
++ * Redistributions in binary form must reproduce the above copyright
++ * notice, this list of conditions and the following disclaimer in the
++ * documentation and/or other materials provided with the distribution.
++ * 
++ * Neither the name of the copyright holder nor the names of its
++ * contributors may be used to endorse or promote products derived from
++ * this software without specific prior written permission.
++ * 
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++\**************************************************************************/
++
++/*!
++  \class SoShadowTransparencyElement SoShadowTransparencyElement.h Inventor/annex/FXViz/elements/SoShadowTransparencyElement.h
++  \brief The SoShadowTransparencyElement class is yet to be documented.
++
++  \ingroup elements
++
++  FIXME: write doc.
++
++  \since Coin 2.5
++*/
++
++#include <Inventor/annex/FXViz/elements/SoShadowTransparencyElement.h>
++
++
++#include <cassert>
++
++SO_ELEMENT_SOURCE(SoShadowTransparencyElement);
++
++/*!
++  \copydetails SoElement::initClass(void)
++*/
++void
++SoShadowTransparencyElement::initClass(void)
++{
++  SO_ELEMENT_INIT_CLASS(SoShadowTransparencyElement, inherited);
++}
++
++/*!
++  Destructor.
++*/
++
++SoShadowTransparencyElement::~SoShadowTransparencyElement(void)
++{
++}
++
++//! FIXME: write doc.
++
++void
++SoShadowTransparencyElement::set(SoState * const state,
++                          SoNode * const node,
++                          const float value)
++{
++  inherited::set(classStackIndex, state, node, value);
++}
++
++/*!
++  Initializes the element to its default value.
++*/
++
++void
++SoShadowTransparencyElement::init(SoState * state)
++{
++  inherited::init(state);
++  this->data = getDefault();
++}
++
++//! FIXME: write doc.
++
++void
++SoShadowTransparencyElement::set(SoState * const state, const float value)
++{
++  SoShadowTransparencyElement::set(state, NULL, value);
++}
++
++//! FIXME: write doc.
++
++float
++SoShadowTransparencyElement::get(SoState * const state)
++{
++  return inherited::get(classStackIndex, state);
++}
++
++//! FIXME: write doc.
++
++float
++SoShadowTransparencyElement::getDefault(void)
++{
++  return 0.2;
++}
++
++
++#ifdef COIN_TEST_SUITE
++
++BOOST_AUTO_TEST_CASE(initialized)
++{
++  BOOST_CHECK_MESSAGE(SoShadowTransparencyElement::getClassStackIndex() != -1,
++                      "missing class initialization");
++}
++
++#endif // COIN_TEST_SUITE
+-- 
+2.23.0
+

@@ -1,0 +1,92 @@
+From 0e60f388f5c151e039295aab892a08eacb31d5e2 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Thu, 21 May 2020 16:53:46 +0800
+Subject: [PATCH 2/2] Fix bump map rendering when being shadowed
+
+---
+ src/shapenodes/soshape_bumprender.cpp | 41 +++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+
+diff --git a/src/shapenodes/soshape_bumprender.cpp b/src/shapenodes/soshape_bumprender.cpp
+index f0bec388e..ca834afb2 100644
+--- a/src/shapenodes/soshape_bumprender.cpp
++++ b/src/shapenodes/soshape_bumprender.cpp
+@@ -57,6 +57,10 @@
+ #include <Inventor/elements/SoMultiTextureMatrixElement.h>
+ #include <Inventor/elements/SoViewVolumeElement.h>
+ #include <Inventor/elements/SoViewingMatrixElement.h>
++#include <Inventor/elements/SoGLShaderProgramElement.h>
++#include <Inventor/elements/SoShapeStyleElement.h>
++#include <Inventor/elements/SoPolygonOffsetElement.h>
++#include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
+ #include <Inventor/errors/SoDebugError.h>
+ #include <Inventor/misc/SoGLImage.h>
+ #include <Inventor/misc/SoState.h>
+@@ -438,6 +442,21 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
+     SoMultiTextureEnabledElement::getEnabledUnits(state, lastenabled); 
+ 
+   state->push();
++
++  SbBool restoreShader = false;
++  if (SoShapeStyleElement::get(state)->getFlags() & SoShapeStyleElement::SHADOWS) {
++    if (SoShadowStyleElement::get(state) & SoShadowStyleElement::SHADOWED) {
++        SoGLShaderProgramElement::enable(state, FALSE);
++        restoreShader = true;
++    }
++    SoPolygonOffsetElement::set(state, 
++                                0, 
++                                1.0,
++                                1.0,
++                                SoPolygonOffsetElement::FILLED,
++                                TRUE);
++  }
++
+   SoMultiTextureEnabledElement::disableAll(state);
+   SoGLMultiTextureEnabledElement::set(state, NULL, 0, TRUE); // enable GL_TEXTURE_2D
+   
+@@ -572,6 +591,9 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
+     glMatrixMode(GL_MODELVIEW);
+   }
+ 
++  if (restoreShader)
++    SoGLShaderProgramElement::enable(state, TRUE);
++
+   state->pop();
+ }
+ 
+@@ -596,6 +618,21 @@ soshape_bumprender::renderBump(SoState * state,
+     SoMultiTextureEnabledElement::getEnabledUnits(state, lastenabled); 
+ 
+   state->push();
++
++  SbBool restoreShader = false;
++  if (SoShapeStyleElement::get(state)->getFlags() & SoShapeStyleElement::SHADOWS) {
++    if (SoShadowStyleElement::get(state) & SoShadowStyleElement::SHADOWED) {
++        SoGLShaderProgramElement::enable(state, FALSE);
++        restoreShader = true;
++    }
++    SoPolygonOffsetElement::set(state, 
++                                0, 
++                                1.0,
++                                1.0,
++                                SoPolygonOffsetElement::FILLED,
++                                TRUE);
++  }
++
+   // only use vertex program if two texture units (or less) are used
+   // (only two units supported in the vertex program)
+   SbBool use_vertex_program = lastenabled <= 1 && SoGLDriverDatabase::isSupported(glue, SO_GL_ARB_VERTEX_PROGRAM);
+@@ -725,6 +762,10 @@ soshape_bumprender::renderBump(SoState * state,
+     glLoadMatrixf(oldtexture0matrix[0]);
+     glMatrixMode(GL_MODELVIEW);
+   }
++
++  if (restoreShader)
++    SoGLShaderProgramElement::enable(state, TRUE);
++
+   state->pop();
+ }
+ 
+-- 
+2.23.0
+
