@@ -5,13 +5,13 @@ set -e
 appdir=$1
 appimage=$2
 image_name=${FMK_CONDA_IMG_NAME:="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"}
+py_ver=3.7
 
 conda create \
     -p $appdir \
+    python=$py_ver \
     calculix blas=*=openblas git gitpython \
-    numpy matplotlib scipy sympy pandas six pyyaml \
-    qt \
-    occt \
+    opencamlib matplotlib numpy scipy sympy pandas \
     --copy \
     --no-default-packages \
     -c freecad \
@@ -26,6 +26,7 @@ fi
 
 # installing some additional libraries with pip
 conda run -p $appdir pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
+# conda run -p $appdir python -m compileall $appdir/usr/lib/python$py_ver $appdir/usr/Mod
 
 pushd "$appdir"
 

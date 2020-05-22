@@ -27,7 +27,7 @@ cat > conda_build_config.tmp << EOS
 CONDA_BUILD_SYSROOT:
 - $PWD/$conda_sdk_dir  # [osx]
 MACOSX_DEPLOYMENT_TARGET:
-- 10.10
+- 10.12
 EOS
 if ! cmp -s conda_build_config.tmp conda_build_config.yaml; then
     cp conda_build_config.tmp conda_build_config.yaml
