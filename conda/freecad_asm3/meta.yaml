@@ -32,7 +32,7 @@ requirements:
   host:
     - boost-cpp
     - python
-    - qt
+    - qt 5.12.1
     - occt
     - xerces-c
     - zlib
@@ -51,12 +51,14 @@ requirements:
     - xorg-libxmu  # [linux]
     - xorg-libxt  # [linux]
     - tbb-devel
+    - blas * openblas
     - freetype
+    - libspnav
   run:
     - {{ pin_compatible("pyside2") }}
-    - {{ pin_compatible("vtk") }}
+    - vtk
     - occt
-    - qt
+    - qt 5.12.1
     - xerces-c
     - zlib
     - boost-cpp
@@ -72,8 +74,12 @@ requirements:
     - freetype
     - numpy
     - six
+    - future
     - pyyaml
-    - solvespace
+    - ply
+    - opencamlib
+    # - solvespace
+    - libspnav
 
 test:
   commands:
