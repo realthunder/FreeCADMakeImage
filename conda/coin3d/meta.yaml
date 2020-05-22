@@ -13,6 +13,8 @@ source:
       sha256: {{ sha256 }}
       patches:
         - 0001-cpack.d-is-now-optional.patch
+        - 0002-Add-new-shadow-style-TRANSPARENT_SHADOWED.patch
+        - 0003-Fix-bump-map-rendering-when-being-shadowed.patch
 
     - url: https://github.com/coin3d/superglu/archive/superglu-{{ version_superglue }}.tar.gz
       sha256: {{ sha256_superglue }}

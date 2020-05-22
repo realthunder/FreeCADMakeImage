@@ -18,7 +18,7 @@ conda create \
     -c conda-forge \
     -y
 
-conda install -p $appdir --use-local freecad-asm3 solvespace -y
+conda install -p $appdir --use-local coin3d freecad-asm3 solvespace -y
 
 if test "$FMK_CONDA_FC_EXTRA"; then
     cp -a "$FMK_CONDA_FC_EXTRA"/* $appdir
