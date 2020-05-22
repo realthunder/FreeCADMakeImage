@@ -418,6 +418,7 @@ if [ "$PROGRAMFILES" != "" ]; then
     fi
 
     libpack=$(cygpath -w $PWD/libpack$vs)
+    echo $libpack
 
     popd
 
@@ -430,6 +431,7 @@ if [ "$PROGRAMFILES" != "" ]; then
             -G "Visual Studio $vs_name Win64" \
             -DFREECAD_LIBPACK_DIR=$libpack \
             -DOCC_INCLUDE_DIR=$libpack/include/opencascade \
+            -DPYTHON_EXECUTABLE=$libpack/bin/python.exe \
             ..
     fi
 
@@ -525,8 +527,15 @@ if [ $(uname) = 'Darwin' ]; then
         conda_path=env
         . ./recipes/setup.sh
 
+        build_ver=`ls -t env/conda-bld/*/work/src/Build/Version.h 2> /dev/null | head -1`
+        if test -f "$build_ver" && \
+           ! cmp -s "$build_ver" repo/src/Build/Version.h; then
+            git_fetch "`dirname $build_ver`/../.." $repo_url $repo_branch
+            cp repo/src/Build/Version.h $build_ver
+        fi
+
         if test -z $rebuild; then
-            conda_cmd+=" --dirty"
+            conda_cmd+=" --dirty "
         fi
 
         if [ $build -ne 3 ]; then
@@ -643,6 +652,13 @@ EOS
     cp -a ../../../conda recipes
     mkdir -p conda-bld cache
 
+    build_ver=`ls -t conda-bld/*/work/src/Build/Version.h 2> /dev/null | head -1`
+    if test -f "$build_ver" && \
+       ! cmp -s "$build_ver" repo/src/Build/Version.h; then
+        git_fetch "`dirname $build_ver`/../.." $repo_url $repo_branch
+        cp repo/src/Build/Version.h $build_ver
+    fi
+
     cmd="export CONDA_BLD_PATH=/home/conda/conda-bld "
 
     if test "$run"; then
@@ -655,7 +671,7 @@ EOS
     fi
 
     if [ $build -ne 3 ]; then
-        cmd+="&& conda build --no-remove-work-dir --keep-old-work --cache-dir ./cache"
+        cmd+="&& conda build --no-remove-work-dir --keep-old-work --cache-dir ./cache "
         if test -z $rebuild; then
             cmd+=" --dirty "
         fi
