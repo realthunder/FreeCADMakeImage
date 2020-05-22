@@ -22,12 +22,16 @@ build_deps="build-essential\
             libboost-signals-dev\
             libboost-thread-dev\
             libcoin-dev\
+            libdouble-conversion-dev\
+            liblz4-dev\
+            libglew-dev\
             libopencv-dev\
             libeigen3-dev\
             libgts-bin\
             libgts-dev\
             libkdtree++-dev\
             libmedc-dev\
+            libmetis-dev\
             libocct-data-exchange-dev\
             libocct-ocaf-dev\
             libocct-visualization-dev\
@@ -37,6 +41,7 @@ build_deps="build-essential\
             libqt5svg5-dev\
             libqt5webkit5-dev\
             libqt5x11extras5-dev\
+            libqt5xmlpatterns5-dev\
             libshiboken2-dev\
             libspnav-dev\
             libvtk7-dev\
@@ -44,7 +49,10 @@ build_deps="build-essential\
             libxerces-c-dev\
             libzipios++-dev\
             lsb-release\
+            netgen\
+            netgen-headers\
             occt-draw\
+            pybind11-dev\
             pyside2-tools\
             python-pyside2.qtcore\
             python-pyside2.qtgui\
@@ -64,4 +72,5 @@ build_deps="build-essential\
             python3-ply\
             qtbase5-dev\
             qttools5-dev\
-            swig"
+            swig\
+            gdb"
