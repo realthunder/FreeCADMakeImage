@@ -15,6 +15,9 @@ source:
         - 0001-cpack.d-is-now-optional.patch
         - 0002-Add-new-shadow-style-TRANSPARENT_SHADOWED.patch
         - 0003-Fix-bump-map-rendering-when-being-shadowed.patch
+        - 0004-Support-shadow-rendering-when-shading-is-off.patch
+        - 0005-Workaround-graphics-driver-bug-when-render-shadow-wi.patch
+        - 0006-Improve-directional-light-update-efficiency-when-ren.patch
 
     - url: https://github.com/coin3d/superglu/archive/superglu-{{ version_superglue }}.tar.gz
       sha256: {{ sha256_superglue }}
@@ -23,7 +26,7 @@ source:
         - superglue.patch
 
 build:
-    number: 1009
+    number: 1010
     skip: true  # [win and py<35]
 
 requirements:

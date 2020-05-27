@@ -1,0 +1,233 @@
+From abdb18818879f02eb962bd1b95201a99522b6027 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Tue, 26 May 2020 18:03:31 +0800
+Subject: [PATCH 2/3] Workaround graphics driver bug when render shadow with
+ spot light
+
+The shader used by SoShadowGroup for spot light requires the
+gl_LightSource[*].spotExponent and spotCosCutOff. However, it seems (at
+least for some driver) these state variable aren't updated in the
+shader. This patch work around the problem by using uniform variables
+to pass the information to the shader program.
+---
+ src/shadows/SoShadowGroup.cpp | 114 +++++++++++++++++++++++++++++-----
+ 1 file changed, 98 insertions(+), 16 deletions(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index 014951388..a740fd43b 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -402,6 +402,12 @@ public:
+     this->maxshadowdistance = new SoShaderParameter1f;
+     this->maxshadowdistance->ref();
+ 
++    this->dropoffrate = new SoShaderParameter1f;
++    this->dropoffrate->ref();
++
++    this->coscutoff = new SoShaderParameter1f;
++    this->coscutoff->ref();
++
+     this->path = path->copy();
+     this->path->ref();
+     assert(((SoFullPath*)path)->getTail()->isOfType(SoLight::getClassTypeId()));
+@@ -493,6 +499,8 @@ public:
+     if (this->depthmapscene) this->depthmapscene->unref();
+     if (this->bboxnode) this->bboxnode->ref();
+     if (this->maxshadowdistance) this->maxshadowdistance->unref();
++    if (this->dropoffrate) this->dropoffrate->unref();
++    if (this->coscutoff) this->coscutoff->unref();
+     if (this->vsm_program) this->vsm_program->unref();
+     if (this->vsm_farval) this->vsm_farval->unref();
+     if (this->vsm_nearval) this->vsm_nearval->unref();
+@@ -602,6 +610,8 @@ public:
+   SoShaderGenerator vsm_vertex_generator;
+   SoShaderGenerator vsm_fragment_generator;
+   SoShaderParameter1f * maxshadowdistance;
++  SoShaderParameter1f * dropoffrate;
++  SoShaderParameter1f * coscutoff;
+ 
+   SoColorPacker colorpacker;
+   SbColor color;
+@@ -1076,6 +1086,10 @@ SoShadowGroupP::updateShadowLights(SoGLRenderAction * action)
+           this->matrixaction.apply(path);
+           this->updateSpotCamera(state, cache, this->matrixaction.getMatrix());
+         }
++        else if (cache->light->isOfType(SoDirectionalLight::getClassTypeId())) {
++          this->matrixaction.apply(path);
++          this->updateDirectionalCamera(state, cache, this->matrixaction.getMatrix());
++        }
+         i2++;
+       }
+     }
+@@ -1229,6 +1243,8 @@ SoShadowGroupP::updateSpotCamera(SoState * COIN_UNUSED_ARG(state), SoShadowLight
+   cache->fragment_farval->value = realfarval;
+   cache->vsm_farval->value = realfarval;
+ 
++  cache->coscutoff->value = float(cos(cutoff>=0.0f?cutoff:0.0f));
++
+   cache->fragment_nearval->value = cache->nearval;
+   cache->vsm_nearval->value = cache->nearval;
+ 
+@@ -1373,13 +1389,29 @@ namespace {
+                 "vec3(gl_LightSource[%d].constantAttenuation,"
+                 "     gl_LightSource[%d].linearAttenuation,"
+                 "     gl_LightSource[%d].quadraticAttenuation),"
+-                "normalize(gl_LightSource[%d].spotDirection),"
++                "gl_LightSource[%d].spotDirection,"
+                 "gl_LightSource[%d].spotExponent,"
+                 "gl_LightSource[%d].spotCosCutoff,"
+                 "eye, ecPosition3, normal, ambient, diffuse, specular);",
+                 dist, i,i,i,i,i,i,i);
+     gen.addMainStatement(str);
+   }
++  void addCachedSpotLight(SoShaderGenerator & gen, int i, SbBool needdist = FALSE) {
++    initLightMaterial(gen, i);
++    const char * dist = needdist ? "dist = " : "";
++    SbString str;
++    str.sprintf("%s SpotLight("
++                "vec3(gl_LightSource[%d].position),"
++                "vec3(gl_LightSource[%d].constantAttenuation,"
++                "     gl_LightSource[%d].linearAttenuation,"
++                "     gl_LightSource[%d].quadraticAttenuation),"
++                "gl_LightSource[%d].spotDirection,"
++                "dropoffrate%d * 128.0,"
++                "coscutoff%d,"
++                "eye, ecPosition3, normal, ambient, diffuse, specular);",
++                dist, i,i,i,i,i,i,i);
++    gen.addMainStatement(str);
++  }
+   void addDirSpotLight(SoShaderGenerator & gen, int i, SbBool needdist = FALSE) {
+     initLightMaterial(gen, i);
+     const char * dist = needdist ? "dist = " : "";
+@@ -1522,7 +1554,7 @@ SoShadowGroupP::setVertexShader(SoState * state)
+ 
+     if (!perpixelspot) {
+       spotlight = TRUE;
+-      addSpotLight(gen, cache->lightid);
++      addCachedSpotLight(gen, cache->lightid);
+       str.sprintf("spotVertexColor%d = \n"
+                   "  ambient.rgb * gl_FrontMaterial.ambient.rgb + "
+                   "  diffuse.rgb * gl_Color.rgb + "
+@@ -1558,26 +1590,49 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     }
+   }
+ 
++  if (numshadowlights) {
++    this->vertexshader->parameter.set1Value(0, this->cameratransform);
++  }
++  else {
++    this->vertexshader->parameter.setNum(0);
++  }
++
++  if (!perpixelspot) {
++    for (i = 0; i < numshadowlights; i++) {
++      SoShadowLightCache * cache = this->shadowlights[i];
++      if (cache->light->isOfType(SoSpotLight::getClassTypeId())) {
++        SbString str;
++        SoSpotLight * sl = static_cast<SoSpotLight*> (cache->light);
++        SoShaderParameter1f * dropoffrate = cache->dropoffrate;
++        dropoffrate->value.connectFrom(&sl->dropOffRate);
++        str.sprintf("dropoffrate%d", cache->lightid);
++        if (dropoffrate->name.getValue() != str) {
++            dropoffrate->name = str;
++        }
++        SbString uniform;
++        uniform.sprintf("uniform float %s;\n", str.getString());
++        gen.addDeclaration(uniform, FALSE);
++        this->vertexshader->parameter.set1Value(this->vertexshader->parameter.getNum(), dropoffrate);
++
++        SoShaderParameter1f * coscutoff = cache->coscutoff;
++        str.sprintf("coscutoff%d", cache->lightid);
++        if (coscutoff->name.getValue() != str) {
++            coscutoff->name = str;
++        }
++        uniform.sprintf("uniform float %s;\n", str.getString());
++        gen.addDeclaration(uniform, FALSE);
++        this->vertexshader->parameter.set1Value(this->vertexshader->parameter.getNum(), coscutoff);
++      }
++    }
++  }
++
+   // never update unless the program has actually changed. Creating a
+   // new GLSL program is very slow on current drivers.
+   if (this->vertexshader->sourceProgram.getValue() != gen.getShaderProgram()) {
+     this->vertexshader->sourceProgram = gen.getShaderProgram();
+     this->vertexshader->sourceType = SoShaderObject::GLSL_PROGRAM;
+-    this->vertexshadercache->set(gen.getShaderProgram());
+-
+-    if (numshadowlights) {
+-      this->vertexshader->parameter.set1Value(0, this->cameratransform);
+-    }
+-    else {
+-      this->vertexshader->parameter.setNum(0);
+-    }
+-#if 0 // for debugging
+-    fprintf(stderr,"new vertex program: %s\n",
+-            gen.getShaderProgram().getString());
+-#endif
+   }
+ 
+-
+   this->vertexshadercache->set(gen.getShaderProgram());
+ 
+   state->pop();
+@@ -1723,7 +1778,7 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       }
+       else {
+         if (normalspot) {
+-          addSpotLight(gen, cache->lightid, TRUE);
++          addCachedSpotLight(gen, cache->lightid, TRUE);
+         }
+         else {
+           addDirSpotLight(gen, cache->lightid, TRUE);
+@@ -1873,6 +1928,7 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   gen.addDeclaration("uniform sampler2D textureMap0;\n", FALSE);
+   gen.addDeclaration("uniform int coin_texunit0_model;\n", FALSE);
+   gen.addDeclaration("uniform float shadow_alpha;\n", FALSE);
++  gen.addDeclaration("uniform float spot_light_exp;\n", FALSE);
+   if (this->numtexunitsinscene > 1) {
+     gen.addDeclaration("uniform int coin_texunit1_model;\n", FALSE);
+     gen.addDeclaration("uniform sampler2D textureMap1;\n", FALSE);
+@@ -2006,6 +2062,31 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       }
+       this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), lightplane);
+     }
++    else if (cache->light->isOfType(SoSpotLight::getClassTypeId())) {
++      SbString str;
++      SoSpotLight * sl = static_cast<SoSpotLight*> (cache->light);
++      if (sl->dropOffRate.getValue() >= 0.0) {
++        SoShaderParameter1f * dropoffrate = cache->dropoffrate;
++        dropoffrate->value.connectFrom(&sl->dropOffRate);
++        str.sprintf("dropoffrate%d", cache->lightid);
++        if (dropoffrate->name.getValue() != str) {
++            dropoffrate->name = str;
++        }
++        SbString uniform;
++        uniform.sprintf("uniform float %s;\n", str.getString());
++        gen.addDeclaration(uniform, FALSE);
++        this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), dropoffrate);
++
++        SoShaderParameter1f * coscutoff = cache->coscutoff;
++        str.sprintf("coscutoff%d", cache->lightid);
++        if (coscutoff->name.getValue() != str) {
++            coscutoff->name = str;
++        }
++        uniform.sprintf("uniform float %s;\n", str.getString());
++        gen.addDeclaration(uniform, FALSE);
++        this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), coscutoff);
++      }
++    }
+   }
+ 
+   this->shadowlightsvalid = TRUE;
+@@ -2140,6 +2221,7 @@ SoShadowGroupP::shader_enable_cb(void * closure,
+ 
+     // calling updateParameters here not only updates shadowalpha above, but
+     // also updates any internal coin parameters
++    thisp->vertexshader->updateParameters(state);
+     thisp->fragmentshader->updateParameters(state);
+   }
+ }
+-- 
+2.23.0
+
