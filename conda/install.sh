@@ -12,6 +12,7 @@ conda create \
     python=$py_ver \
     calculix blas=*=openblas git gitpython \
     opencamlib matplotlib numpy scipy sympy pandas \
+    smesh=*=*_10 \
     --copy \
     --no-default-packages \
     -c freecad \
