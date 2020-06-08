@@ -18,6 +18,8 @@ source:
         - 0004-Support-shadow-rendering-when-shading-is-off.patch
         - 0005-Workaround-graphics-driver-bug-when-render-shadow-wi.patch
         - 0006-Improve-directional-light-update-efficiency-when-ren.patch
+        - 0007-Refactor-smoothBorder-in-SoShadowGroup.patch
+        - 0008-Apply-shadow-style-changes-in-SoShadowStyleElement.patch
 
     - url: https://github.com/coin3d/superglu/archive/superglu-{{ version_superglue }}.tar.gz
       sha256: {{ sha256_superglue }}

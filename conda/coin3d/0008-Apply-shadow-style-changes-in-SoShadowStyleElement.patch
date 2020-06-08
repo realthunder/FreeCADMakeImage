@@ -1,0 +1,89 @@
+From f71f84cadf93f2ae93c346e946f708ab2ce26814 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Mon, 8 Jun 2020 12:16:46 +0800
+Subject: [PATCH] Apply shadow style changes in SoShadowStyleElement
+
+---
+ src/shadows/SoShadowStyle.cpp        | 18 ------------------
+ src/shadows/SoShadowStyleElement.cpp | 18 ++++++++++++++++++
+ 2 files changed, 18 insertions(+), 18 deletions(-)
+
+diff --git a/src/shadows/SoShadowStyle.cpp b/src/shadows/SoShadowStyle.cpp
+index 9299c0775..191c99e7c 100644
+--- a/src/shadows/SoShadowStyle.cpp
++++ b/src/shadows/SoShadowStyle.cpp
+@@ -53,8 +53,6 @@
+ #include <cstdio>
+ 
+ #include <Inventor/actions/SoGLRenderAction.h>
+-#include <Inventor/elements/SoShapeStyleElement.h>
+-#include <Inventor/elements/SoGLShaderProgramElement.h>
+ 
+ #include "nodes/SoSubNodeP.h"
+ #include "shaders/SoGLShaderProgram.h"
+@@ -138,25 +136,9 @@ SoShadowStyle::GLRender(SoGLRenderAction * action)
+ {
+   SoState * state = action->getState();
+ 
+-  unsigned int prev = SoShadowStyleElement::get(state);
+-
+   SoShadowStyleElement::set(state,
+                             this,
+                             (int) this->style.getValue());
+-
+-  if (SoShapeStyleElement::get(state)->getFlags() & SoShapeStyleElement::SHADOWS) {
+-    if (this->style.getValue() & SHADOWED) {
+-      if (prev != TRANSPARENT_SHADOWED && this->style.getValue() == TRANSPARENT_SHADOWED) {
+-        // Make sure to trigger SoShadowGroup shader enable callback, to update
+-        // its shader parameters.
+-        SoGLShaderProgramElement::enable(state, FALSE);
+-      }
+-      SoGLShaderProgramElement::enable(state, TRUE);
+-    }
+-    else {
+-      SoGLShaderProgramElement::enable(state, FALSE);
+-    }
+-  }
+ }
+ 
+ 
+diff --git a/src/shadows/SoShadowStyleElement.cpp b/src/shadows/SoShadowStyleElement.cpp
+index 80438a351..73fc33030 100644
+--- a/src/shadows/SoShadowStyleElement.cpp
++++ b/src/shadows/SoShadowStyleElement.cpp
+@@ -42,6 +42,8 @@
+ */
+ 
+ #include <Inventor/annex/FXViz/elements/SoShadowStyleElement.h>
++#include <Inventor/elements/SoShapeStyleElement.h>
++#include <Inventor/elements/SoGLShaderProgramElement.h>
+ 
+ 
+ #include <cassert>
+@@ -92,7 +94,23 @@ SoShadowStyleElement::init(SoState * state)
+ void
+ SoShadowStyleElement::set(SoState * const state, const int style)
+ {
++  unsigned int prev = get(state);
++
+   SoShadowStyleElement::set(state, NULL, style);
++
++  if (SoShapeStyleElement::get(state)->getFlags() & SoShapeStyleElement::SHADOWS) {
++    if (style & SHADOWED) {
++      if (prev != TRANSPARENT_SHADOWED && style == TRANSPARENT_SHADOWED) {
++        // Make sure to trigger SoShadowGroup shader enable callback, to update
++        // its shader parameters.
++        SoGLShaderProgramElement::enable(state, FALSE);
++      }
++      SoGLShaderProgramElement::enable(state, TRUE);
++    }
++    else {
++      SoGLShaderProgramElement::enable(state, FALSE);
++    }
++  }
+ }
+ 
+ //! FIXME: write doc.
+-- 
+2.23.0
+
