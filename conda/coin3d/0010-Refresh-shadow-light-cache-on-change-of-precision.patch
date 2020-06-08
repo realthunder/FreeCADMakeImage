@@ -1,0 +1,25 @@
+From 217183efc936e2b8928201cd51357b6b6e39fa03 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Mon, 8 Jun 2020 20:28:07 +0800
+Subject: [PATCH] Refresh shadow light cache on change of precision
+
+---
+ src/shadows/SoShadowGroup.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index 0ae3e9a13..8da1a7a38 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -952,6 +952,8 @@ SoShadowGroup::notify(SoNotList * nl)
+       }
+     }
+   }
++  else if (nl->getLastField() == &this->precision)
++    PRIVATE(this)->deleteShadowLights();
+ 
+   if (PRIVATE(this)->vertexshadercache) {
+     PRIVATE(this)->vertexshadercache->invalidate();
+-- 
+2.23.0
+

@@ -21,6 +21,7 @@ source:
         - 0007-Refactor-smoothBorder-in-SoShadowGroup.patch
         - 0008-Apply-shadow-style-changes-in-SoShadowStyleElement.patch
         - 0009-Add-missing-shader-function-in-SoShadowGroup.patch
+        - 0010-Refresh-shadow-light-cache-on-change-of-precision.patch
 
     - url: https://github.com/coin3d/superglu/archive/superglu-{{ version_superglue }}.tar.gz
       sha256: {{ sha256_superglue }}
