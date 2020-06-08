@@ -20,6 +20,7 @@ source:
         - 0006-Improve-directional-light-update-efficiency-when-ren.patch
         - 0007-Refactor-smoothBorder-in-SoShadowGroup.patch
         - 0008-Apply-shadow-style-changes-in-SoShadowStyleElement.patch
+        - 0009-Add-missing-shader-function-in-SoShadowGroup.patch
 
     - url: https://github.com/coin3d/superglu/archive/superglu-{{ version_superglue }}.tar.gz
       sha256: {{ sha256_superglue }}

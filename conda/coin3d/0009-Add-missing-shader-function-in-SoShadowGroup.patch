@@ -1,0 +1,27 @@
+From 507bcf67c799b1313d852fa9bf8c8e93471d4316 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Mon, 8 Jun 2020 17:50:47 +0800
+Subject: [PATCH] Add missing shader function in SoShadowGroup
+
+---
+ src/shadows/SoShadowGroup.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index ca13ba206..c317fcc4b 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -1944,9 +1944,9 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+         gen.addMainStatement("scolor += specular.rgb * gl_FrontMaterial.specular.rgb;\n");
+       }
+ 
+-      if (dirlight) gen.addNamedFunction(SbName("lights/DirectionalLight"), FALSE);
+       if (pointlight) gen.addNamedFunction(SbName("lights/PointLight"), FALSE);
+     }
++    if (dirlight) gen.addNamedFunction(SbName("lights/DirectionalLight"), FALSE);
+     if (spotlight) gen.addNamedFunction(SbName("lights/SpotLight"), FALSE);
+   }
+ 
+-- 
+2.23.0
+
