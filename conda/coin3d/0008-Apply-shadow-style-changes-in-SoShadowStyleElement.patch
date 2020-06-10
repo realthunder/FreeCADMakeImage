@@ -1,4 +1,4 @@
-From f71f84cadf93f2ae93c346e946f708ab2ce26814 Mon Sep 17 00:00:00 2001
+From 2aefb8e72df6413e960b84b10063ace273debd89 Mon Sep 17 00:00:00 2001
 From: "Zheng, Lei" <realthunder.dev@gmail.com>
 Date: Mon, 8 Jun 2020 12:16:46 +0800
 Subject: [PATCH] Apply shadow style changes in SoShadowStyleElement
@@ -48,7 +48,7 @@ index 9299c0775..191c99e7c 100644
  
  
 diff --git a/src/shadows/SoShadowStyleElement.cpp b/src/shadows/SoShadowStyleElement.cpp
-index 80438a351..73fc33030 100644
+index 80438a351..514578a4b 100644
 --- a/src/shadows/SoShadowStyleElement.cpp
 +++ b/src/shadows/SoShadowStyleElement.cpp
 @@ -42,6 +42,8 @@
@@ -60,13 +60,13 @@ index 80438a351..73fc33030 100644
  
  
  #include <cassert>
-@@ -92,7 +94,23 @@ SoShadowStyleElement::init(SoState * state)
- void
- SoShadowStyleElement::set(SoState * const state, const int style)
+@@ -72,7 +74,23 @@ SoShadowStyleElement::set(SoState * const state,
+                           SoNode * const node,
+                           const int style)
  {
 +  unsigned int prev = get(state);
 +
-   SoShadowStyleElement::set(state, NULL, style);
+   SoInt32Element::set(classStackIndex, state, node, style);
 +
 +  if (SoShapeStyleElement::get(state)->getFlags() & SoShapeStyleElement::SHADOWS) {
 +    if (style & SHADOWED) {
@@ -83,7 +83,7 @@ index 80438a351..73fc33030 100644
 +  }
  }
  
- //! FIXME: write doc.
+ /*!
 -- 
 2.23.0
 
