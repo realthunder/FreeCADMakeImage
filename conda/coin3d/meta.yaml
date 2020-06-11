@@ -24,6 +24,7 @@ source:
         - 0010-Refresh-shadow-light-cache-on-change-of-precision.patch
         - 0011-Remove-shadow-spot-light-angle-restriction.patch
         - 0012-Fix-SbDPViewVolume-zNarrow.patch
+        - 0013-Allow-using-SoDirectionalLight-in-SoShadowGroup.patch
 
     - url: https://github.com/coin3d/superglu/archive/superglu-{{ version_superglue }}.tar.gz
       sha256: {{ sha256_superglue }}
