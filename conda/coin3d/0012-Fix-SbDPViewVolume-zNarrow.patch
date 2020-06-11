@@ -1,0 +1,25 @@
+From c01ad20819daf40584bcd3a2297144721047c0bf Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Thu, 11 Jun 2020 11:36:35 +0800
+Subject: [PATCH] Fix SbDPViewVolume::zNarrow()
+
+---
+ src/base/SbDPViewVolume.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/base/SbDPViewVolume.cpp b/src/base/SbDPViewVolume.cpp
+index 0758b3575..031b3af21 100644
+--- a/src/base/SbDPViewVolume.cpp
++++ b/src/base/SbDPViewVolume.cpp
+@@ -971,7 +971,7 @@ SbDPViewVolume::zNarrow(double nearval, double farval) const
+   SbDPViewVolume narrowed = *this;
+ 
+   narrowed.nearDist = this->nearDist + (1.0f - nearval) * this->nearToFar;
+-  narrowed.nearToFar = this->nearDist + this->nearToFar * (1.0f - farval);
++  narrowed.nearToFar = this->nearToFar * (1.0f - farval);
+ 
+   SbVec3d dummy;
+   this->getPlaneRectangle(narrowed.nearDist - this->nearDist,
+-- 
+2.23.0
+
