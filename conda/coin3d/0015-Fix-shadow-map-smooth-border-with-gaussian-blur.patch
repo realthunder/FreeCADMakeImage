@@ -1,0 +1,96 @@
+From a689b74f154c303a9dd25ec37b174a3109e898d0 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Mon, 15 Jun 2020 09:53:07 +0800
+Subject: [PATCH 2/2] Fix shadow map smooth border with gaussian blur
+
+Derive the kernel weight from biomial distribution. See
+http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
+---
+ src/shadows/SoShadowGroup.cpp | 39 ++++++++++++++++++++++++++++-------
+ 1 file changed, 32 insertions(+), 7 deletions(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index fbdca9f..7058912 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -2414,8 +2414,33 @@ SoShadowGroupP::GLRender(SoGLRenderAction * action, const SbBool inpath)
+   state->pop();
+ }
+ 
+-static inline float gaussian(int d, double sigma2) {
+-    return float((1.0 /  sqrt(2.0 * M_PI * sigma2)) * exp(- double(d*d) / (2.0 * sigma2)));
++#define MAX_GAUSSIAN_RADIUS 10
++static int gaussianSize(int size) {
++  return size < MAX_GAUSSIAN_RADIUS ? size : MAX_GAUSSIAN_RADIUS;
++}
++
++static int binomial(int n, int k) {
++    double res = 1;
++    for (int i = 1; i <= k; ++i)
++        res = res * (n - k + i) / i;
++    return (int)(res + 0.01);
++}
++
++static float gaussian(int d, int size) {
++  static float weights[MAX_GAUSSIAN_RADIUS][MAX_GAUSSIAN_RADIUS+1];
++  static bool inited;
++  if (!inited) {
++    inited = true;
++    for (int i=0; i<MAX_GAUSSIAN_RADIUS; ++i) {
++      int n = 2*i + 6;
++      double s = pow(2, n) - (n+1)*2;
++      for (int j=0; j<=i+1; ++j) {
++        weights[i][j] = float(binomial(n, j+2) / s);
++      }
++    }
++  }
++  assert(size > 0 && size <= MAX_GAUSSIAN_RADIUS);
++  return weights[size-1][size-d];
+ }
+ 
+ SoShaderProgram *
+@@ -2429,7 +2454,7 @@ SoShadowLightCache::createGaussFilter(float smoothing, bool horizontal)
+   baseimage->name = "baseimage";
+   baseimage->value = 0;
+ 
+-  int size = (int(smoothing)+3)/2;
++  int size = int(smoothing);
+ 
+   SoShaderGenerator fgen;
+   SbString str;
+@@ -2445,8 +2470,6 @@ SoShadowLightCache::createGaussFilter(float smoothing, bool horizontal)
+   fgen.addMainStatement("vec4 map;\n");
+   fgen.addMainStatement(str);
+ 
+-  double sigma2 = size / 3.0;
+-  sigma2 *= sigma2;
+   float dt = 1.0f / float(this->depthmap->size.getValue()[0]);
+ 
+   const char *fmt;
+@@ -2467,7 +2490,8 @@ SoShadowLightCache::createGaussFilter(float smoothing, bool horizontal)
+ #ifdef USE_BOX_FILTER
+   float weight = 1.0f/(size*2+1);
+ #else
+-  float weight = gaussian(0,sigma2);
++  size = gaussianSize(size);
++  float weight = gaussian(0,size);
+ #endif
+   str.sprintf(fmt, 0.0f);
+   fgen.addMainStatement(str);
+@@ -2476,7 +2500,7 @@ SoShadowLightCache::createGaussFilter(float smoothing, bool horizontal)
+   for (int s = 0; s < size; s++) {
+     int d = size-s;
+ #ifndef USE_BOX_FILTER
+-    weight = gaussian(d, sigma2);
++    weight = gaussian(d,size);
+ #endif
+     float offset = float(d)*dt;
+     str.sprintf(fmt, offset);
+@@ -2620,3 +2644,4 @@ BOOST_AUTO_TEST_CASE(initialized)
+ }
+ 
+ #endif // COIN_TEST_SUITE
++// vim: noai:ts=2:sw=2
+-- 
+2.23.0
+

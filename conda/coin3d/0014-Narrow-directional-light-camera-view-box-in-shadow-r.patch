@@ -1,0 +1,26 @@
+From 2c8ac6f638df573617b243a8699c946f6602c12b Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Mon, 15 Jun 2020 09:52:07 +0800
+Subject: [PATCH 1/2] Narrow directional light camera view box in shadow
+ rendering
+
+---
+ src/shadows/SoShadowGroup.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index 6aa7ec5..fbdca9f 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -1357,7 +1357,7 @@ SoShadowGroupP::updateDirectionalCamera(SoState * state, SoShadowLightCache * ca
+   }
+   cam->viewBoundingBox(isect, 1.0f, 1.0f);
+ 
+-  SbBox3f box = cache->toCameraSpace(worldbox);
++  SbBox3f box = cache->toCameraSpace(isect);
+ 
+   // Bounding box was calculated in camera space, so we need to "flip"
+   // the box (because camera is pointing in the (0,0,-1) direction
+-- 
+2.23.0
+
