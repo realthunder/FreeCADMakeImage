@@ -11,13 +11,14 @@ reads the shadow map texture, and outputs to gaussmap texture. The
 second pass reads the gaussmap texture, and output back the shadow map.
 (reference: http://rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/)
 
-A future improvement may replace the gaussian blue with'Summed Area Table'.
+A future improvement may replace the gaussian blur with'Summed Area Table'.
 http://www.shaderwrangler.com/publications/sat/SAT_EG2005.pdf
+https://www.derschmale.com/2014/07/24/faster-variance-soft-shadow-mapping-for-varying-penumbra-sizes/
 
 'smoothBorder' now uses the integer and the first fractional digits to
 control the filter radius.
 
-In addition to pre-filtering with gaussian blue, which is mostly only
+In addition to pre-filtering with gaussian blur, which is mostly only
 for border smoothing, a post-filter is also implemented in this patch
 that filters while doing shadow rendering. It is mostly used for soft
 shadow rendering. The implementation is inspired by the book 'Computer
