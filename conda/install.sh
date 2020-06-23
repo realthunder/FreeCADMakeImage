@@ -12,7 +12,7 @@ conda create \
     python=$py_ver \
     calculix blas=*=openblas git gitpython \
     opencamlib matplotlib numpy scipy sympy pandas \
-    smesh=*=*_10 \
+    smesh=8.3.0.3=py37*_10 netgen=6.2.1808=py37* \
     --copy \
     --no-default-packages \
     -c freecad \
@@ -120,5 +120,7 @@ fi
 if [[ $appdir == */usr ]]; then
     appdir="$appdir/../"
 fi
-ARCH=x86_64 $apptool/AppRun $appdir ${image_name}.AppImage
+ARCH=x86_64 $apptool/AppRun $appdir -u \
+    "gh-releases-zsync|realthunder|FreeCAD_Assembly3|latest|FreeCAD-asm3-Conda-Py3-Qt5-*-glibc2.12-x86_64.AppImage" \
+    ${image_name}.AppImage
 
