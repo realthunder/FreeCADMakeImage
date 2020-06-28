@@ -29,6 +29,7 @@ source:
         - 0015-Fix-shadow-map-smooth-border-with-gaussian-blur.patch
         - 0016-Fix-transparent-SoShape-losing-per-line-point-color.patch
         - 0017-Support-transparent-shadow-rendering.patch
+        - 0018-Fixed-memory-leak-in-SoShadowLightCache.patch
 
     - url: https://github.com/coin3d/superglu/archive/superglu-{{ version_superglue }}.tar.gz
       sha256: {{ sha256_superglue }}
