@@ -1,7 +1,7 @@
 From c100e097262492b1335abd48c2a58d47cfbbd7b6 Mon Sep 17 00:00:00 2001
 From: "Zheng, Lei" <realthunder.dev@gmail.com>
 Date: Sun, 28 Jun 2020 16:20:10 +0800
-Subject: [PATCH] Support transparent shadow rendering
+Subject: [PATCH 1/5] Support transparent shadow rendering
 
 Inspired by
 https://wickedengine.net/2018/01/18/easy-transparent-shadow-maps/
@@ -1589,6 +1589,485 @@ index 382fd7a36..160692f30 100644
  
  #undef PRIVATE
 +// vim: noai:ts=2:sw=2
+-- 
+2.23.0
+
+
+From b1d9f8ff07b7a13266cb8c37b97533f945c193b7 Mon Sep 17 00:00:00 2001
+From: Volker Enderlein <volkerenderlein@hotmail.com>
+Date: Fri, 29 May 2020 17:37:18 +0200
+Subject: [PATCH 2/5] Fixed memory leak in SoShadowLightCache.
+
+ fixed #388
+---
+ src/shadows/SoShadowGroup.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index dcde256e5..3d9a8cff1 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -519,7 +519,7 @@ public:
+     if (this->gaussalphasceneH) this->gaussalphasceneH->unref();
+     if (this->gaussalphasceneV) this->gaussalphasceneV->unref();
+     if (this->depthtest) this->depthtest->unref();
+-    if (this->bboxnode) this->bboxnode->ref();
++    if (this->bboxnode) this->bboxnode->unref();
+     if (this->maxshadowdistance) this->maxshadowdistance->unref();
+     if (this->dropoffrate) this->dropoffrate->unref();
+     if (this->coscutoff) this->coscutoff->unref();
+-- 
+2.23.0
+
+
+From f0f17791d183a549ae4dd070aad2fd97e6f293a3 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Mon, 29 Jun 2020 15:54:35 +0800
+Subject: [PATCH 3/5] Fix shadow two sided lighting
+
+---
+ src/shadows/SoShadowGroup.cpp | 86 +++++++++++++++++++++++------------
+ 1 file changed, 57 insertions(+), 29 deletions(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index 3d9a8cff1..174d5889a 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -892,6 +892,11 @@ public:
+ 
+     this->shaderprogram->shaderObject.set1Value(0, this->vertexshader);
+     this->shaderprogram->shaderObject.set1Value(1, this->fragmentshader);
++
++    this->twosided = new SoShaderParameter1i;
++    this->twosided->ref();
++    this->twosided->name = "coin_two_sided_lighting";
++    this->twosided->value = 0;
+   }
+   ~SoShadowGroupP() {
+     this->clearLightPaths();
+@@ -1810,6 +1815,10 @@ SoShadowGroupP::setVertexShader(SoState * state)
+   if (numshadowlights) {
+     gen.addDeclaration("uniform mat4 cameraTransform;", FALSE);
+   }
++
++  if (!this->transparentShadow())
++    gen.addDeclaration("uniform int coin_two_sided_lighting;\n", FALSE);
++
+   gen.addDeclaration("varying vec3 ecPosition3;", FALSE);
+   gen.addDeclaration("varying vec3 fragmentNormal;", FALSE);
+   gen.addDeclaration("varying vec3 perVertexColor;", FALSE);
+@@ -1834,6 +1843,22 @@ SoShadowGroupP::setVertexShader(SoState * state)
+ 
+   gen.addMainStatement("fragmentNormal = normal;");
+ 
++  gen.addMainStatement(
++      "vec4 sceneColor = gl_FrontLightModelProduct.sceneColor;\n"
++      "vec4 mambient = gl_FrontMaterial.ambient;\n"
++      "vec4 mspecular = gl_FrontMaterial.specular;\n"
++      "if (normal.z < 0.0 ");
++  if (!this->transparentShadow())
++    gen.addMainStatement(
++        "&& coin_two_sided_lighting != 0");
++  gen.addMainStatement(
++      ") {\n"
++      "   normal = -normal;\n"
++      "   sceneColor = gl_BackLightModelProduct.sceneColor;\n"
++      "   mambient = gl_BackMaterial.ambient;\n"
++      "   mspecular = gl_BackMaterial.specular;\n"
++      "}\n");
++
+   if (!perpixelother) {
+     for (i = 0; i < lights.getLength(); i++) {
+       SoLight * l = (SoLight*) lights[i];
+@@ -1861,14 +1886,14 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     if (dirlight) gen.addNamedFunction(SbName("lights/DirectionalLight"), FALSE);
+     if (pointlight) gen.addNamedFunction(SbName("lights/PointLight"), FALSE);
+ 
+-    gen.addMainStatement("color = gl_FrontLightModelProduct.sceneColor + "
+-                         "  accambient * gl_FrontMaterial.ambient + "
++    gen.addMainStatement("color = sceneColor + "
++                         "  accambient * mambient + "
+                          "  accdiffuse * gl_Color +"
+-                         "  accspecular * gl_FrontMaterial.specular;\n"
++                         "  accspecular * mspecular;\n"
+                          );
+   }
+   else {
+-    gen.addMainStatement("color = gl_FrontLightModelProduct.sceneColor;\n");
++    gen.addMainStatement("color = sceneColor;\n");
+   }
+ 
+   if (numshadowlights) {
+@@ -1917,12 +1942,9 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     }
+   }
+ 
+-  if (numshadowlights) {
++  this->vertexshader->parameter.setNum(0);
++  if (numshadowlights)
+     this->vertexshader->parameter.set1Value(0, this->cameratransform);
+-  }
+-  else {
+-    this->vertexshader->parameter.setNum(0);
+-  }
+ 
+   if (!perpixelspot) {
+     for (i = 0; i < numshadowlights; i++) {
+@@ -1953,6 +1975,9 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     }
+   }
+ 
++  if (!this->transparentShadow())
++    this->vertexshader->parameter.set1Value(this->vertexshader->parameter.getNum(), this->twosided);
++
+   // never update unless the program has actually changed. Creating a
+   // new GLSL program is very slow on current drivers.
+   if (this->vertexshader->sourceProgram.getValue() != gen.getShaderProgram()) {
+@@ -2000,11 +2025,6 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   int numshadowlights = this->shadowlights.getLength();
+   SbBool dirspot = FALSE;
+ 
+-  // ATi doesn't seem to support gl_FrontFace in hardware. We've only
+-  // verified that nVidia supports it so far.
+-  SbBool twosidetest = glue->vendor_is_nvidia && ((perpixelspot && numshadowlights) || perpixelother);
+-
+-
+   if (numshadowlights) {
+     SbString eps;
+     eps.sprintf("const float EPSILON = %f;",
+@@ -2063,9 +2083,25 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     gen.addNamedFunction("vsm/VsmLookup", FALSE);
+   }
+   gen.addMainStatement("vec3 normal = normalize(fragmentNormal);\n");
+-  if (twosidetest) {
+-    gen.addMainStatement("if (coin_two_sided_lighting != 0 && !gl_FrontFacing) normal = -normal;\n");
+-  }
++
++  gen.setVersion("#version 110");
++  gen.addMainStatement(
++      "vec4 mambient = gl_FrontMaterial.ambient;\n"
++      "vec4 mspecular = gl_FrontMaterial.specular;\n"
++      "vec3 fdx = dFdx(ecPosition3);\n"
++      "vec3 fdy = dFdy(ecPosition3);\n"
++      "vec3 faceNormal = normalize(cross(fdx,fdy));\n"
++      "if (dot (normal, faceNormal) < 0.0 ");
++  if (!this->transparentShadow())
++    gen.addMainStatement(
++        "&& coin_two_sided_lighting != 0");
++  gen.addMainStatement(
++      ") {\n"
++      "   normal = -normal;\n"
++      "   mambient = gl_BackMaterial.ambient;\n"
++      "   mspecular = gl_BackMaterial.specular;\n"
++      "}\n");
++
+   gen.addMainStatement("vec3 eye = -normalize(ecPosition3);\n");
+   gen.addMainStatement("vec4 ambient = vec4(0.0);\n"
+                        "vec4 diffuse = vec4(0.0);\n"
+@@ -2287,9 +2323,9 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+                                     "Unknown light type: %s",
+                                     l->getTypeId().getName().getString());
+         }
+-        gen.addMainStatement("color += ambient.rgb * gl_FrontMaterial.ambient.rgb + "
++        gen.addMainStatement("color += ambient.rgb * mambient.rgb + "
+                              "diffuse.rgb * mydiffuse.rgb;\n");
+-        gen.addMainStatement("scolor += specular.rgb * gl_FrontMaterial.specular.rgb;\n");
++        gen.addMainStatement("scolor += specular.rgb * mspecular.rgb;\n");
+       }
+ 
+       if (pointlight) gen.addNamedFunction(SbName("lights/PointLight"), FALSE);
+@@ -2354,9 +2390,8 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     gen.addDeclaration("uniform sampler2D textureMap1;\n", FALSE);
+   }
+   gen.addDeclaration("uniform int coin_light_model;\n", FALSE);
+-  if (twosidetest) {
++  if (!this->transparentShadow())
+     gen.addDeclaration("uniform int coin_two_sided_lighting;\n", FALSE);
+-  }
+ 
+   if (dirspot) {
+     gen.addNamedFunction("lights/DirSpotLight", FALSE);
+@@ -2463,15 +2498,8 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   if (this->numtexunitsinscene > 1) this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), this->texunit1);
+   this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), this->lightmodel);
+ 
+-  if (twosidetest) {
+-    if (!this->twosided) {
+-      this->twosided = new SoShaderParameter1i;
+-      this->twosided->ref();
+-      this->twosided->name = "coin_two_sided_lighting";
+-      this->twosided->value = 0;
+-    }
++  if (!this->transparentShadow())
+     this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), this->twosided);
+-  }
+ 
+   for (i = 0; i < numshadowlights; i++) {
+     SoShadowLightCache * cache = this->shadowlights[i];
+-- 
+2.23.0
+
+
+From e2be822f4d10ee8642a860ff9b3a522756cf2cc1 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Mon, 29 Jun 2020 16:04:10 +0800
+Subject: [PATCH 4/5] Disable per vertex shadow for now
+
+To simplify shadow rendering code path
+---
+ src/shadows/SoShadowGroup.cpp | 46 ++++++++++++++++++++++++++++++++---
+ 1 file changed, 42 insertions(+), 4 deletions(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index 174d5889a..477716d3c 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -1806,10 +1806,12 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     str.sprintf("varying vec4 shadowCoord%d;", i);
+     gen.addDeclaration(str, FALSE);
+ 
++#ifdef PER_VERTEX_SHADOW
+     if (!perpixelspot) {
+       str.sprintf("varying vec3 spotVertexColor%d;", i);
+       gen.addDeclaration(str, FALSE);
+     }
++#endif
+   }
+ 
+   if (numshadowlights) {
+@@ -1904,15 +1906,17 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     str.sprintf("shadowCoord%d = gl_TextureMatrix[%d] * pos;\n", i, cache->texunit); // in light space
+     gen.addMainStatement(str);
+ 
++#ifdef PER_VERTEX_SHADOW
+     if (!perpixelspot) {
+       spotlight = TRUE;
+       addCachedSpotLight(gen, cache->lightid);
+       str.sprintf("spotVertexColor%d = \n"
+-                  "  ambient.rgb * gl_FrontMaterial.ambient.rgb + "
++                  "  ambient.rgb * mambient.rgb + "
+                   "  diffuse.rgb * gl_Color.rgb + "
+-                  "  specular.rgb * gl_FrontMaterial.specular.rgb;\n", i);
++                  "  specular.rgb * mspecular.rgb;\n", i);
+       gen.addMainStatement(str);
+     }
++#endif
+   }
+ 
+   if (spotlight) gen.addNamedFunction(SbName("lights/SpotLight"), FALSE);
+@@ -1946,6 +1950,7 @@ SoShadowGroupP::setVertexShader(SoState * state)
+   if (numshadowlights)
+     this->vertexshader->parameter.set1Value(0, this->cameratransform);
+ 
++#ifdef PER_VERTEX_SHADOW
+   if (!perpixelspot) {
+     for (i = 0; i < numshadowlights; i++) {
+       SoShadowLightCache * cache = this->shadowlights[i];
+@@ -1974,6 +1979,7 @@ SoShadowGroupP::setVertexShader(SoState * state)
+       }
+     }
+   }
++#endif
+ 
+   if (!this->transparentShadow())
+     this->vertexshader->parameter.set1Value(this->vertexshader->parameter.getNum(), this->twosided);
+@@ -2056,10 +2062,12 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     str.sprintf("varying vec4 shadowCoord%d;", i);
+     gen.addDeclaration(str, FALSE);
+ 
++#ifdef PER_VERTEX_SHADOW
+     if (!perpixelspot) {
+       str.sprintf("varying vec3 spotVertexColor%d;", i);
+       gen.addDeclaration(str, FALSE);
+     }
++#endif
+     if (this->shadowlights[i]->light->isOfType(SoDirectionalLight::getClassTypeId())) {
+       str.sprintf("uniform vec4 lightplane%d;", i);
+       gen.addDeclaration(str, FALSE);
+@@ -2128,8 +2136,9 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   float swidth = (smoothing % 100000)*5e-5f;
+ 
+   // To simplify shadow rendering a bit, we'll always perform perpixel shading for now
+-  //
+-  // if (perpixelspot)
++#ifdef PER_VERTEX_SHADOW
++  if (perpixelspot)
++#endif
+   {
+     SbString str;
+     int count;
+@@ -2333,6 +2342,35 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     if (dirlight) gen.addNamedFunction(SbName("lights/DirectionalLight"), FALSE);
+     if (spotlight) gen.addNamedFunction(SbName("lights/SpotLight"), FALSE);
+   }
++#ifdef PER_VERTEX_SHADOW
++  else {
++    for (i = 0; i < numshadowlights; i++) {
++      SbString insidetest = "&& coord.x >= 0.0 && coord.x <= 1.0 && coord.y >= 0.0 && coord.y <= 1.0)";
++
++      SoLight * light = this->shadowlights[i]->light;
++      if (light->isOfType(SoSpotLight::getClassTypeId())) {
++        SoSpotLight * sl = static_cast<SoSpotLight*> (light);
++        if (sl->dropOffRate.getValue() >= 0.0f) {
++          insidetest = ")";
++        }
++      }
++      SbString str;
++      str.sprintf("dist = length(vec3(gl_LightSource[%d].position) - ecPosition3);\n"
++                  "coord = 0.5 * (shadowCoord%d.xyz / shadowCoord%d.w + vec3(1.0));\n"
++                  "map = texture2D(shadowMap%d, coord.xy);\n"
++#ifdef USE_NEGATIVE
++                  "map = (map + vec4(1.0)) * 0.5;\n"
++#endif // USE_NEGATIVE
++#ifdef DISTRIBUTE_FACTOR
++                  "map.xy += map.zw / DISTRIBUTE_FACTOR;\n"
++#endif
++                  "shadeFactor = (shadowCoord%d.z > -1.0%s ? VsmLookup(map, (dist - nearval%d)/(farval%d-nearval%d), EPSILON, THRESHOLD) : 1.0;\n"
++                  "color += shadeFactor * spotVertexColor%d;\n",
++                  lights.getLength()+i, i , i, i, i,insidetest.getString(), i,i,i,i);
++      gen.addMainStatement(str);
++    }
++  }
++#endif
+ 
+   gen.addMainStatement(
+       "if (coin_light_model != 0) {\n"
+-- 
+2.23.0
+
+
+From c4fe52daabda6ef7e9bf1f5ec7b17835d7c2df6e Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Tue, 30 Jun 2020 08:23:29 +0800
+Subject: [PATCH 5/5] Fix transparent shadow color blending
+
+---
+ src/shadows/SoShadowGroup.cpp | 51 ++++++++++++++++++++++-------------
+ 1 file changed, 32 insertions(+), 19 deletions(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index 477716d3c..f79331373 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -2122,10 +2122,11 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   }
+   gen.addMainStatement("vec3 color = perVertexColor;\n"
+                        "vec3 scolor = vec3(0.0);\n"
+-                       "vec3 acolor;\n"
++                       "vec3 accumAlphaColor = vec3(1.0);\n"
++                       "vec4 acolor = vec4(1.0);\n"
+                        "float dist;\n"
+                        "float swidth;\n"
+-                       "float totalShade = 0.0;\n"
++                       "float accumShade = 0.0;\n"
+                        "float shadeFactor;\n"
+                        "float alphaFactor;\n"
+                        "float s;\n"
+@@ -2227,14 +2228,14 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       str.sprintf("coord = 0.5 * (shadowCoord%d.xyz / shadowCoord%d.w + vec3(1.0));\n", i , i);
+       gen.addMainStatement(str);
+ 
+-      str.sprintf("if (shadowCoord%d.z < -0.9999", i);
++      str.sprintf("if (shadowCoord%d.z < -1.0", i);
+       gen.addMainStatement(str);
+       if (insidetest)
+-        gen.addMainStatement(" || coord.x < 0.0001 || coord.x > 0.9999 || coord.y < 0.0001 || coord.y > 0.9999");
++        gen.addMainStatement(" || coord.x < 0.001 || coord.x > 0.999 || coord.y < 0.001 || coord.y > 0.999");
+       gen.addMainStatement(
+           ") {\n"
+           "  shadeFactor = 1.0;\n"
+-          "  acolor = vec3(1.0);\n"
++          "  acolor = vec4(1.0);\n"
+           "} else {\n"
+           "  shadeFactor = 0.0;\n"
+           "  alphaFactor = 0.0;\n");
+@@ -2263,22 +2264,33 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       if (cache->alphamap) {
+         gen.addMainStatement(
+             "if (shadeFactor < 0.01) \n"
+-            "  acolor = vec3(1.0);\n"
++            "  acolor = vec4(1.0);\n"
+             "else {\n"
+-            "  acolor = vec3(0.0);\n");
++            "  acolor = vec4(0.0);\n");
+         for (int j=0; j<count; ++j) {
+           str.sprintf("map = texture2D(alphaMap%d, coord.xy + "
+                 "(vec2(%f,%f)+offset.xy)*swidth*0.001*shadowCoord%d.w);\n",
+                 i, offsets[j*2], offsets[j*2+1], i);
+           gen.addMainStatement(str);
+-          gen.addMainStatement("acolor += map.rgb;\n");
++          gen.addMainStatement("acolor += map;\n");
+         }
+         if (count > 1) {
+           str.sprintf("acolor /= %d.0;\n", count);
+           gen.addMainStatement(str);
+         }
+-        str.sprintf("if(mydiffuse.a!=1.0)\n"
+-                    "  acolor *= vec3(1.0 - shadow2D(alphaDepthMap%d, coord));\n", i);
++        // If casting transparent shadow on a transparent fragment, use the
++        // alpha depth map to get a depth comparison result and use it as alpha
++        // to blend with pure white. So if shadow2D() returns 1.0, it means the
++        // current fragment is completly above the shadow, so acolor will
++        // become white, so no change of fragment color, i.e. no transparent
++        // color shadow.
++        str.sprintf("if(acolor.a > 0.0 && mydiffuse.a < 1.0) {\n"
++                    "  float d = shadow2D(alphaDepthMap%d, coord).z;\n"
++                    "  acolor *= 1.0 - d;\n"
++                    "  acolor.rgb += d;\n"
++                    "}\n"
++                    "shadeFactor *= 1.0 - acolor.a;\n"
++                    , i);
+         gen.addMainStatement(str);
+         gen.addMainStatement("}\n");
+       }
+@@ -2303,12 +2315,13 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       }
+       gen.addMainStatement(
+           "}\n"
+-          "totalShade += shadeFactor;\n"
+-          "color += shadeFactor * diffuse.rgb * mydiffuse.rgb * acolor;\n"
+-          "scolor += shadeFactor * gl_FrontMaterial.specular.rgb * specular.rgb;\n"
+-          "color += ambient.rgb * gl_FrontMaterial.ambient.rgb;\n");
++          "accumShade += shadeFactor;\n"
++          "accumAlphaColor *= acolor.rgb;\n"
++          "color += shadeFactor * diffuse.rgb * mydiffuse.rgb * acolor.rgb;\n"
++          "scolor += shadeFactor * mspecular.rgb * specular.rgb;\n"
++          "color += ambient.rgb * mambient.rgb;\n");
+     }
+-    str.sprintf("totalShade /= %d.0;\n", numshadowlights);
++    str.sprintf("accumShade /= %d.0;\n", numshadowlights);
+     gen.addMainStatement(str);
+ 
+     if (perpixelother) {
+@@ -2380,9 +2393,9 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       // When lighting is off, the shadeFactor seems too aggressive. The clamp
+       // is added here to mix the shadow color with the ground. It would be better
+       // to expose this as an attribute somehow.
+-      "  color = clamp(totalShade,0.5,1.0) * mydiffuse.rgb * texcolor.rgb;\n");
++      "  color = clamp(accumShade,0.5,1.0) * accumAlphaColor * mydiffuse.rgb * texcolor.rgb;\n");
+ 
+-  gen.addMainStatement("if (shadow_alpha != 1.0 && mydiffuse.a == 0.0 && totalShade < 0.999) {"
++  gen.addMainStatement("if (shadow_alpha != 1.0 && mydiffuse.a == 0.0 && accumShade < 0.999) {"
+                             "mydiffuse.a = shadow_alpha;"
+                             "color = vec3(clamp(color.r, 0.0, mydiffuse.r),"
+                                          "clamp(color.g, 0.0, mydiffuse.g),"
+@@ -3085,14 +3098,14 @@ SoShadowLightCache::alphamap_glcallback(void * COIN_UNUSED_ARG(closure), SoActio
+   if (action->isOfType(SoGLRenderAction::getClassTypeId())) {
+     SoState * state = action->getState();
+     SoLazyElement::setLightModel(state, SoLazyElement::BASE_COLOR);
+-    SoTextureQualityElement::set(state, 0.0f);
++    // SoTextureQualityElement::set(state, 0.0f);
+     SoNormalElement::set(state, NULL, 0, NULL, FALSE);
+ 
+     SoDepthBufferElement::set(state, TRUE, FALSE, SoDepthBufferElement::LEQUAL, SbVec2f(0.,1.));
+ 
+     SoOverrideElement::setNormalVectorOverride(state, NULL, TRUE);
+     SoOverrideElement::setLightModelOverride(state, NULL, TRUE);
+-    SoTextureOverrideElement::setQualityOverride(state, TRUE);
++    // SoTextureOverrideElement::setQualityOverride(state, TRUE);
+ 
+     SoShapeStyleElement::setTransparentShadowMap(state, TRUE);
+   }
 -- 
 2.23.0
 
