@@ -1,7 +1,7 @@
 From c100e097262492b1335abd48c2a58d47cfbbd7b6 Mon Sep 17 00:00:00 2001
 From: "Zheng, Lei" <realthunder.dev@gmail.com>
 Date: Sun, 28 Jun 2020 16:20:10 +0800
-Subject: [PATCH 1/5] Support transparent shadow rendering
+Subject: [PATCH 1/6] Support transparent shadow rendering
 
 Inspired by
 https://wickedengine.net/2018/01/18/easy-transparent-shadow-maps/
@@ -1596,7 +1596,7 @@ index 382fd7a36..160692f30 100644
 From b1d9f8ff07b7a13266cb8c37b97533f945c193b7 Mon Sep 17 00:00:00 2001
 From: Volker Enderlein <volkerenderlein@hotmail.com>
 Date: Fri, 29 May 2020 17:37:18 +0200
-Subject: [PATCH 2/5] Fixed memory leak in SoShadowLightCache.
+Subject: [PATCH 2/6] Fixed memory leak in SoShadowLightCache.
 
  fixed #388
 ---
@@ -1623,7 +1623,7 @@ index dcde256e5..3d9a8cff1 100644
 From f0f17791d183a549ae4dd070aad2fd97e6f293a3 Mon Sep 17 00:00:00 2001
 From: "Zheng, Lei" <realthunder.dev@gmail.com>
 Date: Mon, 29 Jun 2020 15:54:35 +0800
-Subject: [PATCH 3/5] Fix shadow two sided lighting
+Subject: [PATCH 3/6] Fix shadow two sided lighting
 
 ---
  src/shadows/SoShadowGroup.cpp | 86 +++++++++++++++++++++++------------
@@ -1811,7 +1811,7 @@ index 3d9a8cff1..174d5889a 100644
 From e2be822f4d10ee8642a860ff9b3a522756cf2cc1 Mon Sep 17 00:00:00 2001
 From: "Zheng, Lei" <realthunder.dev@gmail.com>
 Date: Mon, 29 Jun 2020 16:04:10 +0800
-Subject: [PATCH 4/5] Disable per vertex shadow for now
+Subject: [PATCH 4/6] Disable per vertex shadow for now
 
 To simplify shadow rendering code path
 ---
@@ -1939,7 +1939,7 @@ index 174d5889a..477716d3c 100644
 From c4fe52daabda6ef7e9bf1f5ec7b17835d7c2df6e Mon Sep 17 00:00:00 2001
 From: "Zheng, Lei" <realthunder.dev@gmail.com>
 Date: Tue, 30 Jun 2020 08:23:29 +0800
-Subject: [PATCH 5/5] Fix transparent shadow color blending
+Subject: [PATCH 5/6] Fix transparent shadow color blending
 
 ---
  src/shadows/SoShadowGroup.cpp | 51 ++++++++++++++++++++++-------------
@@ -2068,6 +2068,34 @@ index 477716d3c..f79331373 100644
  
      SoShapeStyleElement::setTransparentShadowMap(state, TRUE);
    }
+-- 
+2.23.0
+
+
+From 426081058c666db35775aaabf10bb5b2b98966a7 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Thu, 2 Jul 2020 07:52:10 +0800
+Subject: [PATCH 6/6] Fix missing shadow alpha depth map clearing
+
+---
+ src/shadows/SoShadowGroup.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index f79331373..9369e7057 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -1644,6 +1644,10 @@ SoShadowGroupP::renderDepthMap(SoShadowLightCache * cache,
+       cache->alphamap->unref();
+       cache->alphamap = NULL;
+     }
++    if (cache->alphadepthmap) {
++      cache->alphadepthmap->unref();
++      cache->alphadepthmap = NULL;
++    }
+     return;
+   }
+ 
 -- 
 2.23.0
 
