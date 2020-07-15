@@ -121,6 +121,6 @@ if [[ $appdir == */usr ]]; then
     appdir="$appdir/../"
 fi
 ARCH=x86_64 $apptool/AppRun $appdir -u \
-    "gh-releases-zsync|realthunder|FreeCAD_Assembly3|latest|FreeCAD-asm3-Conda-Py3-Qt5-*-glibc2.12-x86_64.AppImage" \
+    "gh-releases-zsync|realthunder|FreeCAD_assembly3|latest|FreeCAD-asm3-Conda-Py3-Qt5-*x86_64.AppImage.zsync" \
     ${image_name}.AppImage
 
