@@ -660,6 +660,7 @@ EOS
     fi
 
     cmd="export CONDA_BLD_PATH=/home/conda/conda-bld "
+    cmd+=" && export CONDA_PKGS_DIRS=/home/conda/pkgs "
 
     if test "$run"; then
         IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
