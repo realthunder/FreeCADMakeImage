@@ -547,7 +547,10 @@ if [ $(uname) = 'Darwin' ]; then
 
         if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
             build_dir=`ls -t conda-bld/*/work/ 2> /dev/null | head -1`
-            recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
+            build_dir=${build_dir%:}
+            if test $build_dir; then
+                recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
+            fi
         fi
 
         if test -z $rebuild; then
@@ -680,7 +683,10 @@ EOS
 
     if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
         build_dir=`ls -t conda-bld/*/work/ 2> /dev/null | head -1`
-        recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
+        build_dir=${build_dir%:}
+        if test $build_dir; then
+            recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
+        fi
     fi
 
     cmd="export CONDA_BLD_PATH=/home/conda/conda-bld "
@@ -713,7 +719,7 @@ EOS
               && rm -rf $appdir \
               && mkdir -p $appdir/usr \
               && cp -a recipes/AppDir/* $appdir/ \
-              && recipes/install.sh $appdir/usr appimage
+              && recipes/install.sh $appdir/usr appimage \
               && (test -z $FMK_BRANDING \
                   || recipes/branding/$FMK_BRANDING/install.sh recipes/branding/$FMK_BRANDING $appdir)"
     fi
