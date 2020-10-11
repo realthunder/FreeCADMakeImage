@@ -5,9 +5,12 @@ cd build/release
 # should be applied @vtk-feedstock
 if [[ ${HOST} =~ .*linux.* ]]; then
     LIBPTHREAD=$(find ${PREFIX} -name "libpthread.so") sed -i 's#/home/conda/feedstock_root/build_artifacts/vtk_.*_build_env/x86_64-conda_cos6-linux-gnu/sysroot/usr/lib.*;##g' ${PREFIX}/lib/cmake/vtk-8.2/Modules/vtkhdf5.cmake 
+    cmake_generator="Ninja"
+else
+    cmake_generator="Unix Makefiles"
 fi
 
-cmake -G "Ninja" \
+cmake -G "$cmake_generator" \
       -D BUID_WITH_CONDA:BOOL=ON \
       -D CMAKE_BUILD_TYPE=Release \
       -D CMAKE_INSTALL_PREFIX:FILEPATH=$PREFIX \
@@ -35,5 +38,9 @@ cmake -G "Ninja" \
       -D BUILD_DYNAMIC_LINK_PYTHON:BOOL=OFF \
       ../..
 
-ninja install
+if [[ ${HOST} =~ .*linux.* ]]; then
+    ninja install
+else
+    cmake --build . --target install --parallel 3
+fi
 rm -r ${PREFIX}/doc     # smaller size of package!
