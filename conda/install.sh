@@ -4,20 +4,35 @@ set -e
 
 appdir=$1
 appimage=$2
+requirements=$3
 image_name=${FMK_CONDA_IMG_NAME:="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"}
 py_ver=3.7
 
-conda create \
-    -p $appdir \
-    python=$py_ver \
-    calculix blas=*=openblas git gitpython \
-    opencamlib matplotlib numpy scipy sympy pandas \
-    smesh=8.3.0.3=py37*_10 netgen=6.2.1808=py37* \
-    --copy \
-    --no-default-packages \
-    -c freecad \
-    -c conda-forge \
-    -y
+if test $requirements; then
+    conda create \
+        -p $appdir \
+        --file $requirements \
+        --no-default-packages \
+        -c freecad \
+        -c conda-forge \
+        -y
+else
+    if ! test -d "$appdir"_template; then
+        conda create \
+            -p "$appdir"_template \
+            python=$py_ver \
+            qt=5.12.1 \
+            calculix blas=*=openblas git gitpython \
+            opencamlib matplotlib numpy scipy sympy pandas gmsh \
+            smesh=8.3.0.3=py37*_10 netgen=6.2.1808=py37* \
+            --copy \
+            --no-default-packages \
+            -c freecad \
+            -c conda-forge \
+            -y
+    fi
+    conda create -p $appdir --clone "$appdir"_template -y --copy
+fi
 
 conda install -p $appdir --use-local coin3d freecad-asm3 solvespace -y
 
