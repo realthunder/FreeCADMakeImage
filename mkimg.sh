@@ -59,7 +59,7 @@ conda[=<conda_docker_name>]: build and package using conda-build. On linux, the
                              
                              The following additional arguments are supported,
 
-    conda-recipes=<path_to_recipies>: conda recipes to build. If more than one
+    conda-recipes=<path_to_recipes>: conda recipes to build. If more than one
                                       recipe is given, separate them with space
                                       and use quote. If no recipes is given, it
                                       builds all recipes in 'conda' directory.
@@ -422,6 +422,7 @@ if [ "$PROGRAMFILES" != "" ]; then
 
     popd
 
+    branding=$PWD/../../conda/branding
     mkdir -p repo/build$vs
     pushd repo/build$vs
 
@@ -444,6 +445,11 @@ if [ "$PROGRAMFILES" != "" ]; then
             mkdir -p src/Build
             cp ../src/Build/Version.h src/Build
         fi
+
+        if test $FMK_BRANDING && test -f $branding/$FMK_BRANDING/build-setup.sh; then
+            $branding/$FMK_BRANDING/build-setup.sh $branding/$FMK_BRANDING/ .
+        fi
+
 
         # get cpu core count
         ncpu=$(grep -c ^processor /proc/cpuinfo)
@@ -501,18 +507,23 @@ if [ "$PROGRAMFILES" != "" ]; then
     # copy out the result to tmp directory
     tar --exclude '*.pyc' --exclude '*.pdb' -cf - bin Mod Ext data | (cd $tmpdir && tar xvBf -)
 
+    date=$(date +%Y%m%d)
+    export FMK_BUILD_DATE=$date
+    if test $FMK_BRANDING; then
+        $branding/$FMK_BRANDING/install.sh $branding/$FMK_BRANDING/ $tmpdir
+    fi
+
     cd $tmpdir
 
     # install personal workbench. This script will write version string to
     # ../VERSION file
     ../../../installwb.sh
     cd ..
-    date=$(date +%Y%m%d)
     name=FreeCAD-$img_name-Win64-$build_name-$date
 
     # archive the result
     mv tmp $name
-    7z a ../out/$name.7z $name
+    # 7z a ../out/$name.7z $name
 
     exit
 fi
@@ -534,6 +545,11 @@ if [ $(uname) = 'Darwin' ]; then
             cp repo/src/Build/Version.h $build_ver
         fi
 
+        if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
+            build_dir=`ls -t conda-bld/*/work/ 2> /dev/null | head -1`
+            recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
+        fi
+
         if test -z $rebuild; then
             conda_cmd+=" --dirty "
         fi
@@ -547,7 +563,11 @@ if [ $(uname) = 'Darwin' ]; then
             cd recipes
             cp -a MacBundle $app_path
             base_path=$app_path/FreeCAD.app/Contents/Resources
+            export FMK_BUILD_DATE=$date
             ./install.sh $base_path
+            if test $FMK_BRANDING; then
+                branding/$FMK_BRANDING/install.sh branding/$FMK_BRANDING $base_path
+            fi
 
             export FMK_WB_BASE_PATH=$base_path
             export FMK_REPO_VER_PATH="$base_path/VERSION"
@@ -555,7 +575,6 @@ if [ $(uname) = 'Darwin' ]; then
 
             # ver=$(conda run -p $base_path python get_freecad_version.py)
 
-            date=$(date +%Y%m%d)
             out=../../../out/$app_path
             rm -f $out
             hdiutil create -fs HFS+ -srcfolder $app_path $out
@@ -659,6 +678,11 @@ EOS
         cp repo/src/Build/Version.h $build_ver
     fi
 
+    if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
+        build_dir=`ls -t conda-bld/*/work/ 2> /dev/null | head -1`
+        recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
+    fi
+
     cmd="export CONDA_BLD_PATH=/home/conda/conda-bld "
     cmd+=" && export CONDA_PKGS_DIRS=/home/conda/pkgs "
 
@@ -685,10 +709,13 @@ EOS
         FMK_WB_BASE_PATH=wb ../../../installwb.sh
         cmd+="&& export FMK_CONDA_IMG_NAME=$conda_img_name \
               && export FMK_CONDA_FC_EXTRA=/home/conda/wb \
+              && export FMK_BUILD_DATE=$date \
               && rm -rf $appdir \
               && mkdir -p $appdir/usr \
-              && cp recipes/AppDir/* $appdir/ \
-              && recipes/install.sh $appdir/usr appimage"
+              && cp -a recipes/AppDir/* $appdir/ \
+              && recipes/install.sh $appdir/usr appimage
+              && (test -z $FMK_BRANDING \
+                  || recipes/branding/$FMK_BRANDING/install.sh recipes/branding/$FMK_BRANDING $appdir)"
     fi
     $sudo docker run --rm -ti -v $PWD:/home/conda $conda /bin/bash -c "$cmd"
 

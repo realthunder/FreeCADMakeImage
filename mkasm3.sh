@@ -1,5 +1,6 @@
 #!/bin/bash
 
+test "$FMK_BRANDING" || export FMK_BRANDING=asm3
 test "$FMK_IMG_NAME" || export FMK_IMG_NAME=asm3
 test "$FMK_REPO_URL" || export FMK_REPO_URL=https://github.com/realthunder/FreeCAD
 test "$FMK_REPO_BRANCH" || export FMK_REPO_BRANCH=LinkStage3

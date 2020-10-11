@@ -17,7 +17,7 @@ export PYTHONDONTWRITEBYTECODE=1
 #export GTK_DATA_PREFIX=$PREFIX
 #export XDG_DATA_DIRS=$PREFIX/share/:$XDG_DATA_DIRS
 
-name=FreeCAD
+name=FreeCADLink
 if [ "${ARGV0#*cmd*}" = 'cmd' ]; then
     name=${name}Cmd
 elif [ "$1" = 'cmd' ]; then
@@ -25,7 +25,7 @@ elif [ "$1" = 'cmd' ]; then
     name=${name}Cmd
 fi
 cd $PREFIX/bin
-if test -e "$name"Link; then
+if test -e $name; then
     ./"$name"Link "$@"
 else
     ./$name "$@"
