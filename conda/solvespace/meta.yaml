@@ -22,9 +22,9 @@ requirements:
         - cmake
         - swig
     host:
-        - python
+        - python 3.7
     run:
-        - python
+        - python 3.7
 
 # test: # disable test for now, as on macos it crashes somehow
 #     imports:
