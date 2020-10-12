@@ -5,7 +5,6 @@ set -ex
 appdir=$1
 appimage=$2
 image_name=${FMK_CONDA_IMG_NAME:="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"}
-py_ver=3.7
 
 if test $FMK_CONDA_REQUIRMENTS; then
     conda create \
@@ -18,11 +17,8 @@ if test $FMK_CONDA_REQUIRMENTS; then
 else
     conda create \
         -p "$appdir" \
-        python=$py_ver \
-        qt=5.12.1 \
         calculix blas=*=openblas git gitpython \
-        opencamlib matplotlib numpy scipy sympy pandas \
-        smesh=8.3.0.3=py37*_10 netgen=6.2.1808=py37* \
+        opencamlib matplotlib numpy scipy sympy pandas gmsh \
         --copy \
         --no-default-packages \
         -c freecad \

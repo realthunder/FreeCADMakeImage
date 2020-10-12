@@ -31,8 +31,8 @@ requirements:
     - git
   host:
     - boost-cpp
-    - python 3.7
-    - qt 5.12.1
+    - python
+    - qt
     - occt
     - xerces-c
     - zlib
@@ -43,8 +43,8 @@ requirements:
     - coin3d
     - pivy
     - pyside2
-    - smesh 8.3.0.3
-    - netgen 6.2.1808
+    - smesh
+    - netgen
     - doxygen
     - hdf5
     - xorg-libxi  # [linux]
@@ -58,16 +58,16 @@ requirements:
     - {{ pin_compatible("pyside2") }}
     - vtk
     - occt
-    - qt 5.12.1
+    - qt
     - xerces-c
     - zlib
     - boost-cpp
     - hdf5
-    - python 3.7
+    - python
     - coin3d
     - pivy
-    - smesh 8.3.0.3
-    - netgen 6.2.1808
+    - smesh
+    - netgen
     - xorg-libxi  # [linux]
     - xorg-libxmu  # [linux]
     - xorg-libxt  # [linux]
