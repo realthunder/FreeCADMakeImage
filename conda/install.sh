@@ -21,7 +21,7 @@ else
         python=$py_ver \
         qt=5.12.1 \
         calculix blas=*=openblas git gitpython \
-        opencamlib matplotlib numpy scipy sympy pandas gmsh \
+        opencamlib matplotlib numpy scipy sympy pandas \
         smesh=8.3.0.3=py37*_10 netgen=6.2.1808=py37* \
         --copy \
         --no-default-packages \
