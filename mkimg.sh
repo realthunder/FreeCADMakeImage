@@ -545,13 +545,13 @@ if [ $(uname) = 'Darwin' ]; then
             cp repo/src/Build/Version.h $build_ver
         fi
 
-        if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
-            build_dir=`ls -t conda-bld/*/work/ 2> /dev/null | head -1`
-            build_dir=${build_dir%:}
-            if test $build_dir; then
-                recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
-            fi
-        fi
+        # if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
+        #     build_dir=`ls -t conda-bld/*/work/ 2> /dev/null | head -1`
+        #     build_dir=${build_dir%:}
+        #     if test $build_dir; then
+        #         recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
+        #     fi
+        # fi
 
         if test -z $rebuild; then
             conda_cmd+=" --dirty "
@@ -681,13 +681,13 @@ EOS
         cp repo/src/Build/Version.h $build_ver
     fi
 
-    if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
-        build_dir=`ls -t conda-bld/*/work/ 2> /dev/null | head -1`
-        build_dir=${build_dir%:}
-        if test $build_dir; then
-            recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
-        fi
-    fi
+    # if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
+    #     build_dir=`ls -t conda-bld/*/work/ 2> /dev/null | head -1`
+    #     build_dir=${build_dir%:}
+    #     if test $build_dir; then
+    #         recipes/branding/$FMK_BRANDING/build-setup.sh recipes/branding/$FMK_BRANDING/ $build_dir
+    #     fi
+    # fi
 
     cmd="export CONDA_BLD_PATH=/home/conda/conda-bld "
     cmd+=" && export CONDA_PKGS_DIRS=/home/conda/pkgs "
