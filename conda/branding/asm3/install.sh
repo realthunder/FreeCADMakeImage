@@ -15,7 +15,7 @@ cp $src/AppDir/* $dst/
 
 if test -d $dst/share; then
     cp -a $src/icons $dst/share/
-    mv bin/FreeCAD bin/FreeCADLink
+    mv $dst/bin/FreeCAD $dst/bin/FreeCADLink
 elif test -f $dst/bin/FreeCAD.exe; then
     mv $dst/bin/FreeCAD.exe $dst/bin/FreeCADLink.exe
 fi

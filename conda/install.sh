@@ -1,37 +1,33 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 appdir=$1
 appimage=$2
-requirements=$3
 image_name=${FMK_CONDA_IMG_NAME:="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"}
 py_ver=3.7
 
-if test $requirements; then
+if test $FMK_CONDA_REQUIRMENTS; then
     conda create \
         -p $appdir \
-        --file $requirements \
+        --file $FMK_CONDA_REQUIRMENTS \
         --no-default-packages \
         -c freecad \
         -c conda-forge \
         -y
 else
-    if ! test -d "$appdir"_template; then
-        conda create \
-            -p "$appdir"_template \
-            python=$py_ver \
-            qt=5.12.1 \
-            calculix blas=*=openblas git gitpython \
-            opencamlib matplotlib numpy scipy sympy pandas gmsh \
-            smesh=8.3.0.3=py37*_10 netgen=6.2.1808=py37* \
-            --copy \
-            --no-default-packages \
-            -c freecad \
-            -c conda-forge \
-            -y
-    fi
-    conda create -p $appdir --clone "$appdir"_template -y --copy
+    conda create \
+        -p "$appdir" \
+        python=$py_ver \
+        qt=5.12.1 \
+        calculix blas=*=openblas git gitpython \
+        opencamlib matplotlib numpy scipy sympy pandas gmsh \
+        smesh=8.3.0.3=py37*_10 netgen=6.2.1808=py37* \
+        --copy \
+        --no-default-packages \
+        -c freecad \
+        -c conda-forge \
+        -y
 fi
 
 conda install -p $appdir --use-local coin3d freecad-asm3 solvespace -y
@@ -115,6 +111,10 @@ app_path_rpl=$(replace_path_gen "$app_path" ../)
 find . -type f -exec sed -i -e "s@$app_path@$app_path_rpl@g" {} \;
 
 popd
+
+if test $FMK_BRANDING; then
+    recipes/branding/$FMK_BRANDING/install.sh recipes/branding/$FMK_BRANDING $appdir
+fi
 
 apptool=appimagetool
 if ! test -e $apptool/AppRun; then

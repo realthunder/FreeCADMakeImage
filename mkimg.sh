@@ -51,6 +51,8 @@ docker[=<docker_image_name>]: specify building linux AppImage using docker. You
                                shell. The home directory is mapped into the
                                container as /shared.
 
+    podman: use podman instead of docker to run container
+
 conda[=<conda_docker_name>]: build and package using conda-build. On linux, the
                              conda envionment runs inside a docker container.
                              And you can supply an optional docker image name
@@ -67,6 +69,10 @@ conda[=<conda_docker_name>]: build and package using conda-build. On linux, the
     sudo: in case of running conda inside docker, you may have to launch the
           docker container using sudo.
 
+    podman: use podman instead of docker to run container
+
+    fetch: sync conda build working copy of FreeCAD source using git fetch
+
 py3: specify building FreeCAD python3. This argument is only used when building
      windows package, which uses the newer Libpack 12 with Visual Studio 2017.
 EOF
@@ -75,6 +81,8 @@ EOF
 mkdir -p build/out
 
 docker=
+docker_exe=docker
+docker_run="$docker_exe run"
 dockerfile=
 dist=bionic
 dist_ver=
@@ -86,6 +94,7 @@ run=
 sudo=
 rebuild=
 py3=
+gitfetch=
 while test $1; do
     arg=$1
     case "$arg" in
@@ -99,6 +108,11 @@ while test $1; do
             ;;
         sudo)
             sudo=sudo
+            shift
+            continue
+            ;;
+        fetch)
+            gitfetch=1
             shift
             continue
             ;;
@@ -121,6 +135,12 @@ while test $1; do
             ;;
         docker|docker=*)
             docker=${arg#*=}
+            shift
+            continue
+            ;;
+        podman)
+            docker_exe=podman
+            docker_run="podman run --userns=keep-id --security-opt label=disable"
             shift
             continue
             ;;
@@ -225,9 +245,9 @@ if test "$docker"; then
         esac
     fi
     if test "$dockerfile"; then
-        $sudo docker build -t $docker -f "$dockerfile" "$(dirname "$dockerfile")"
+        $sudo $docker_exe build -t $docker -f "$dockerfile" "$(dirname "$dockerfile")"
     else
-        $sudo docker build -t $docker -f - ./docker << EOS
+        $sudo $docker_exe build -t $docker -f - ./docker << EOS
 FROM ubuntu:$dist_ver
 
 COPY ${dist}_deps.sh .
@@ -246,14 +266,18 @@ EOS
         if [ "$run" != run ] && which readlink; then
             run=`readlink -e "$run"`
         fi
-        IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
-        xhost + $IP
-        docker_cmd="docker run --rm -it -e DISPLAY=${IP}:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
-                -v "$run":/AppImage -v "$HOME":/shared --security-opt seccomp:unconfined ${docker} "
-        if [ "$run" = run ]; then
-            $sudo $docker_cmd bash
+        if which xhost; then
+            IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
+            xhost + $IP
+            run_cmd="$docker_run --rm -it -e DISPLAY=${IP}:0 -v /tmp/.X11-unix:/tmp/.X11-unix \
+                    -v "$run":/AppImage -v "$HOME":/shared --security-opt seccomp:unconfined ${docker} "
         else
-            $sudo $docker_cmd bash -c "/AppImage --appimage-extract && squashfs-root/AppRun"
+            run_cmd="$docker_run --rm -it -v "$run":/AppImage -v "$HOME":/shared ${docker} "
+        fi
+        if [ "$run" = run ]; then
+            $sudo $run_cmd bash
+        else
+            $sudo $run_cmd bash -c "/AppImage --appimage-extract && squashfs-root/AppRun"
         fi
         exit
     fi
@@ -264,7 +288,7 @@ EOS
     cd build/docker
     mkdir -p $docker
     find ../../ -maxdepth 1 -type f | xargs -I {} cp {} $docker/
-    $sudo docker run --rm -ti -v $PWD/$docker:/home/freecad/works -w /home/freecad/works \
+    $sudo $docker_run --rm -ti -v $PWD/$docker:/home/freecad/works -w /home/freecad/works \
         $docker bash -c "./tmp.sh"
     mv $docker/build/out/* ../out/
     exit
@@ -543,6 +567,11 @@ if [ $(uname) = 'Darwin' ]; then
            ! cmp -s "$build_ver" repo/src/Build/Version.h; then
             git_fetch "`dirname $build_ver`/../.." $repo_url $repo_branch
             cp repo/src/Build/Version.h $build_ver
+        elif test $gitfetch; then
+            repo_path=`ls -t conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
+            if test -f $repo_path; then
+                git_fetch "`dirname $repo_path`" $repo_url $repo_branch
+            fi
         fi
 
         # if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
@@ -662,7 +691,7 @@ if test $conda; then
     date=$(date +%Y%m%d)
     conda_img_name="FreeCAD-$img_name-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
 
-    $sudo docker build -t $conda - << EOS
+    $sudo $docker_exe build -t $conda - << EOS
 FROM condaforge/linux-anvil-comp7
 
 RUN yum install -y mesa-libGL-devel \
@@ -676,9 +705,14 @@ EOS
 
     build_ver=`ls -t conda-bld/*/work/src/Build/Version.h 2> /dev/null | head -1`
     if test -f "$build_ver" && \
-       ! cmp -s "$build_ver" repo/src/Build/Version.h; then
+    ! cmp -s "$build_ver" repo/src/Build/Version.h; then
         git_fetch "`dirname $build_ver`/../.." $repo_url $repo_branch
         cp repo/src/Build/Version.h $build_ver
+    elif test $gitfetch; then
+        repo_path=`ls -t conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
+        if test -f $repo_path; then
+            git_fetch "`dirname $repo_path`" $repo_url $repo_branch
+        fi
     fi
 
     # if test $FMK_BRANDING && test -f recipes/branding/$FMK_BRANDING/build-setup.sh; then
@@ -693,11 +727,15 @@ EOS
     cmd+=" && export CONDA_PKGS_DIRS=/home/conda/pkgs "
 
     if test "$run"; then
-        IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
-        xhost + $IP
-        $sudo docker run --rm -ti -v $PWD:/home/conda -e DISPLAY=${IP}:0 \
-            -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME":/shared \
-             --security-opt seccomp:unconfined ${conda} bash
+        if which xhost; then
+            IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
+            xhost + $IP
+            $sudo $docker_run --rm -ti -v $PWD:/home/conda -e DISPLAY=${IP}:0 \
+                -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME":/shared \
+                --security-opt seccomp:unconfined ${conda} bash
+        else
+            $sudo $docker_run --rm -ti -v $PWD:/home/conda -v "$HOME":/shared ${conda} bash
+        fi
         exit
     fi
 
@@ -716,14 +754,14 @@ EOS
         cmd+="&& export FMK_CONDA_IMG_NAME=$conda_img_name \
               && export FMK_CONDA_FC_EXTRA=/home/conda/wb \
               && export FMK_BUILD_DATE=$date \
+              && export FMK_BRANDING=$FMK_BRANDING \
+              && export FMK_CONDA_REQUIRMENTS=$FMK_CONDA_REQUIRMENTS \
               && rm -rf $appdir \
               && mkdir -p $appdir/usr \
               && cp -a recipes/AppDir/* $appdir/ \
-              && recipes/install.sh $appdir/usr appimage \
-              && (test -z $FMK_BRANDING \
-                  || recipes/branding/$FMK_BRANDING/install.sh recipes/branding/$FMK_BRANDING $appdir)"
+              && recipes/install.sh $appdir/usr appimage"
     fi
-    $sudo docker run --rm -ti -v $PWD:/home/conda $conda /bin/bash -c "$cmd"
+    $sudo $docker_run --rm -ti -v $PWD:/home/conda $conda /bin/bash -c "$cmd"
 
     if [ $build -gt 1 ]; then
         mv ${conda_img_name}.AppImage* ../../out/
