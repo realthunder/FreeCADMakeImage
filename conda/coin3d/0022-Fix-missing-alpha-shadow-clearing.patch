@@ -1,0 +1,27 @@
+From 426081058c666db35775aaabf10bb5b2b98966a7 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Thu, 2 Jul 2020 07:52:10 +0800
+Subject: [PATCH 6/6] Fix missing shadow alpha depth map clearing
+
+---
+ src/shadows/SoShadowGroup.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index f79331373..9369e7057 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -1644,6 +1644,10 @@ SoShadowGroupP::renderDepthMap(SoShadowLightCache * cache,
+       cache->alphamap->unref();
+       cache->alphamap = NULL;
+     }
++    if (cache->alphadepthmap) {
++      cache->alphadepthmap->unref();
++      cache->alphadepthmap = NULL;
++    }
+     return;
+   }
+ 
+-- 
+2.23.0
+

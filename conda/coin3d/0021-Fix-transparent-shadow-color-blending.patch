@@ -1,0 +1,135 @@
+From c4fe52daabda6ef7e9bf1f5ec7b17835d7c2df6e Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Tue, 30 Jun 2020 08:23:29 +0800
+Subject: [PATCH 5/6] Fix transparent shadow color blending
+
+---
+ src/shadows/SoShadowGroup.cpp | 51 ++++++++++++++++++++++-------------
+ 1 file changed, 32 insertions(+), 19 deletions(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index 477716d3c..f79331373 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -2122,10 +2122,11 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   }
+   gen.addMainStatement("vec3 color = perVertexColor;\n"
+                        "vec3 scolor = vec3(0.0);\n"
+-                       "vec3 acolor;\n"
++                       "vec3 accumAlphaColor = vec3(1.0);\n"
++                       "vec4 acolor = vec4(1.0);\n"
+                        "float dist;\n"
+                        "float swidth;\n"
+-                       "float totalShade = 0.0;\n"
++                       "float accumShade = 0.0;\n"
+                        "float shadeFactor;\n"
+                        "float alphaFactor;\n"
+                        "float s;\n"
+@@ -2227,14 +2228,14 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       str.sprintf("coord = 0.5 * (shadowCoord%d.xyz / shadowCoord%d.w + vec3(1.0));\n", i , i);
+       gen.addMainStatement(str);
+ 
+-      str.sprintf("if (shadowCoord%d.z < -0.9999", i);
++      str.sprintf("if (shadowCoord%d.z < -1.0", i);
+       gen.addMainStatement(str);
+       if (insidetest)
+-        gen.addMainStatement(" || coord.x < 0.0001 || coord.x > 0.9999 || coord.y < 0.0001 || coord.y > 0.9999");
++        gen.addMainStatement(" || coord.x < 0.001 || coord.x > 0.999 || coord.y < 0.001 || coord.y > 0.999");
+       gen.addMainStatement(
+           ") {\n"
+           "  shadeFactor = 1.0;\n"
+-          "  acolor = vec3(1.0);\n"
++          "  acolor = vec4(1.0);\n"
+           "} else {\n"
+           "  shadeFactor = 0.0;\n"
+           "  alphaFactor = 0.0;\n");
+@@ -2263,22 +2264,33 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       if (cache->alphamap) {
+         gen.addMainStatement(
+             "if (shadeFactor < 0.01) \n"
+-            "  acolor = vec3(1.0);\n"
++            "  acolor = vec4(1.0);\n"
+             "else {\n"
+-            "  acolor = vec3(0.0);\n");
++            "  acolor = vec4(0.0);\n");
+         for (int j=0; j<count; ++j) {
+           str.sprintf("map = texture2D(alphaMap%d, coord.xy + "
+                 "(vec2(%f,%f)+offset.xy)*swidth*0.001*shadowCoord%d.w);\n",
+                 i, offsets[j*2], offsets[j*2+1], i);
+           gen.addMainStatement(str);
+-          gen.addMainStatement("acolor += map.rgb;\n");
++          gen.addMainStatement("acolor += map;\n");
+         }
+         if (count > 1) {
+           str.sprintf("acolor /= %d.0;\n", count);
+           gen.addMainStatement(str);
+         }
+-        str.sprintf("if(mydiffuse.a!=1.0)\n"
+-                    "  acolor *= vec3(1.0 - shadow2D(alphaDepthMap%d, coord));\n", i);
++        // If casting transparent shadow on a transparent fragment, use the
++        // alpha depth map to get a depth comparison result and use it as alpha
++        // to blend with pure white. So if shadow2D() returns 1.0, it means the
++        // current fragment is completly above the shadow, so acolor will
++        // become white, so no change of fragment color, i.e. no transparent
++        // color shadow.
++        str.sprintf("if(acolor.a > 0.0 && mydiffuse.a < 1.0) {\n"
++                    "  float d = shadow2D(alphaDepthMap%d, coord).z;\n"
++                    "  acolor *= 1.0 - d;\n"
++                    "  acolor.rgb += d;\n"
++                    "}\n"
++                    "shadeFactor *= 1.0 - acolor.a;\n"
++                    , i);
+         gen.addMainStatement(str);
+         gen.addMainStatement("}\n");
+       }
+@@ -2303,12 +2315,13 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       }
+       gen.addMainStatement(
+           "}\n"
+-          "totalShade += shadeFactor;\n"
+-          "color += shadeFactor * diffuse.rgb * mydiffuse.rgb * acolor;\n"
+-          "scolor += shadeFactor * gl_FrontMaterial.specular.rgb * specular.rgb;\n"
+-          "color += ambient.rgb * gl_FrontMaterial.ambient.rgb;\n");
++          "accumShade += shadeFactor;\n"
++          "accumAlphaColor *= acolor.rgb;\n"
++          "color += shadeFactor * diffuse.rgb * mydiffuse.rgb * acolor.rgb;\n"
++          "scolor += shadeFactor * mspecular.rgb * specular.rgb;\n"
++          "color += ambient.rgb * mambient.rgb;\n");
+     }
+-    str.sprintf("totalShade /= %d.0;\n", numshadowlights);
++    str.sprintf("accumShade /= %d.0;\n", numshadowlights);
+     gen.addMainStatement(str);
+ 
+     if (perpixelother) {
+@@ -2380,9 +2393,9 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+       // When lighting is off, the shadeFactor seems too aggressive. The clamp
+       // is added here to mix the shadow color with the ground. It would be better
+       // to expose this as an attribute somehow.
+-      "  color = clamp(totalShade,0.5,1.0) * mydiffuse.rgb * texcolor.rgb;\n");
++      "  color = clamp(accumShade,0.5,1.0) * accumAlphaColor * mydiffuse.rgb * texcolor.rgb;\n");
+ 
+-  gen.addMainStatement("if (shadow_alpha != 1.0 && mydiffuse.a == 0.0 && totalShade < 0.999) {"
++  gen.addMainStatement("if (shadow_alpha != 1.0 && mydiffuse.a == 0.0 && accumShade < 0.999) {"
+                             "mydiffuse.a = shadow_alpha;"
+                             "color = vec3(clamp(color.r, 0.0, mydiffuse.r),"
+                                          "clamp(color.g, 0.0, mydiffuse.g),"
+@@ -3085,14 +3098,14 @@ SoShadowLightCache::alphamap_glcallback(void * COIN_UNUSED_ARG(closure), SoActio
+   if (action->isOfType(SoGLRenderAction::getClassTypeId())) {
+     SoState * state = action->getState();
+     SoLazyElement::setLightModel(state, SoLazyElement::BASE_COLOR);
+-    SoTextureQualityElement::set(state, 0.0f);
++    // SoTextureQualityElement::set(state, 0.0f);
+     SoNormalElement::set(state, NULL, 0, NULL, FALSE);
+ 
+     SoDepthBufferElement::set(state, TRUE, FALSE, SoDepthBufferElement::LEQUAL, SbVec2f(0.,1.));
+ 
+     SoOverrideElement::setNormalVectorOverride(state, NULL, TRUE);
+     SoOverrideElement::setLightModelOverride(state, NULL, TRUE);
+-    SoTextureOverrideElement::setQualityOverride(state, TRUE);
++    // SoTextureOverrideElement::setQualityOverride(state, TRUE);
+ 
+     SoShapeStyleElement::setTransparentShadowMap(state, TRUE);
+   }
+-- 
+2.23.0
+

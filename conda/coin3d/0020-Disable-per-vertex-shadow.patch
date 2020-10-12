@@ -1,0 +1,127 @@
+From e2be822f4d10ee8642a860ff9b3a522756cf2cc1 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Mon, 29 Jun 2020 16:04:10 +0800
+Subject: [PATCH 4/6] Disable per vertex shadow for now
+
+To simplify shadow rendering code path
+---
+ src/shadows/SoShadowGroup.cpp | 46 ++++++++++++++++++++++++++++++++---
+ 1 file changed, 42 insertions(+), 4 deletions(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index 174d5889a..477716d3c 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -1806,10 +1806,12 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     str.sprintf("varying vec4 shadowCoord%d;", i);
+     gen.addDeclaration(str, FALSE);
+ 
++#ifdef PER_VERTEX_SHADOW
+     if (!perpixelspot) {
+       str.sprintf("varying vec3 spotVertexColor%d;", i);
+       gen.addDeclaration(str, FALSE);
+     }
++#endif
+   }
+ 
+   if (numshadowlights) {
+@@ -1904,15 +1906,17 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     str.sprintf("shadowCoord%d = gl_TextureMatrix[%d] * pos;\n", i, cache->texunit); // in light space
+     gen.addMainStatement(str);
+ 
++#ifdef PER_VERTEX_SHADOW
+     if (!perpixelspot) {
+       spotlight = TRUE;
+       addCachedSpotLight(gen, cache->lightid);
+       str.sprintf("spotVertexColor%d = \n"
+-                  "  ambient.rgb * gl_FrontMaterial.ambient.rgb + "
++                  "  ambient.rgb * mambient.rgb + "
+                   "  diffuse.rgb * gl_Color.rgb + "
+-                  "  specular.rgb * gl_FrontMaterial.specular.rgb;\n", i);
++                  "  specular.rgb * mspecular.rgb;\n", i);
+       gen.addMainStatement(str);
+     }
++#endif
+   }
+ 
+   if (spotlight) gen.addNamedFunction(SbName("lights/SpotLight"), FALSE);
+@@ -1946,6 +1950,7 @@ SoShadowGroupP::setVertexShader(SoState * state)
+   if (numshadowlights)
+     this->vertexshader->parameter.set1Value(0, this->cameratransform);
+ 
++#ifdef PER_VERTEX_SHADOW
+   if (!perpixelspot) {
+     for (i = 0; i < numshadowlights; i++) {
+       SoShadowLightCache * cache = this->shadowlights[i];
+@@ -1974,6 +1979,7 @@ SoShadowGroupP::setVertexShader(SoState * state)
+       }
+     }
+   }
++#endif
+ 
+   if (!this->transparentShadow())
+     this->vertexshader->parameter.set1Value(this->vertexshader->parameter.getNum(), this->twosided);
+@@ -2056,10 +2062,12 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     str.sprintf("varying vec4 shadowCoord%d;", i);
+     gen.addDeclaration(str, FALSE);
+ 
++#ifdef PER_VERTEX_SHADOW
+     if (!perpixelspot) {
+       str.sprintf("varying vec3 spotVertexColor%d;", i);
+       gen.addDeclaration(str, FALSE);
+     }
++#endif
+     if (this->shadowlights[i]->light->isOfType(SoDirectionalLight::getClassTypeId())) {
+       str.sprintf("uniform vec4 lightplane%d;", i);
+       gen.addDeclaration(str, FALSE);
+@@ -2128,8 +2136,9 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   float swidth = (smoothing % 100000)*5e-5f;
+ 
+   // To simplify shadow rendering a bit, we'll always perform perpixel shading for now
+-  //
+-  // if (perpixelspot)
++#ifdef PER_VERTEX_SHADOW
++  if (perpixelspot)
++#endif
+   {
+     SbString str;
+     int count;
+@@ -2333,6 +2342,35 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     if (dirlight) gen.addNamedFunction(SbName("lights/DirectionalLight"), FALSE);
+     if (spotlight) gen.addNamedFunction(SbName("lights/SpotLight"), FALSE);
+   }
++#ifdef PER_VERTEX_SHADOW
++  else {
++    for (i = 0; i < numshadowlights; i++) {
++      SbString insidetest = "&& coord.x >= 0.0 && coord.x <= 1.0 && coord.y >= 0.0 && coord.y <= 1.0)";
++
++      SoLight * light = this->shadowlights[i]->light;
++      if (light->isOfType(SoSpotLight::getClassTypeId())) {
++        SoSpotLight * sl = static_cast<SoSpotLight*> (light);
++        if (sl->dropOffRate.getValue() >= 0.0f) {
++          insidetest = ")";
++        }
++      }
++      SbString str;
++      str.sprintf("dist = length(vec3(gl_LightSource[%d].position) - ecPosition3);\n"
++                  "coord = 0.5 * (shadowCoord%d.xyz / shadowCoord%d.w + vec3(1.0));\n"
++                  "map = texture2D(shadowMap%d, coord.xy);\n"
++#ifdef USE_NEGATIVE
++                  "map = (map + vec4(1.0)) * 0.5;\n"
++#endif // USE_NEGATIVE
++#ifdef DISTRIBUTE_FACTOR
++                  "map.xy += map.zw / DISTRIBUTE_FACTOR;\n"
++#endif
++                  "shadeFactor = (shadowCoord%d.z > -1.0%s ? VsmLookup(map, (dist - nearval%d)/(farval%d-nearval%d), EPSILON, THRESHOLD) : 1.0;\n"
++                  "color += shadeFactor * spotVertexColor%d;\n",
++                  lights.getLength()+i, i , i, i, i,insidetest.getString(), i,i,i,i);
++      gen.addMainStatement(str);
++    }
++  }
++#endif
+ 
+   gen.addMainStatement(
+       "if (coin_light_model != 0) {\n"
+-- 
+2.23.0
+

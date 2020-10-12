@@ -1,0 +1,187 @@
+From f0f17791d183a549ae4dd070aad2fd97e6f293a3 Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Mon, 29 Jun 2020 15:54:35 +0800
+Subject: [PATCH 3/6] Fix shadow two sided lighting
+
+---
+ src/shadows/SoShadowGroup.cpp | 86 +++++++++++++++++++++++------------
+ 1 file changed, 57 insertions(+), 29 deletions(-)
+
+diff --git a/src/shadows/SoShadowGroup.cpp b/src/shadows/SoShadowGroup.cpp
+index 3d9a8cff1..174d5889a 100644
+--- a/src/shadows/SoShadowGroup.cpp
++++ b/src/shadows/SoShadowGroup.cpp
+@@ -892,6 +892,11 @@ public:
+ 
+     this->shaderprogram->shaderObject.set1Value(0, this->vertexshader);
+     this->shaderprogram->shaderObject.set1Value(1, this->fragmentshader);
++
++    this->twosided = new SoShaderParameter1i;
++    this->twosided->ref();
++    this->twosided->name = "coin_two_sided_lighting";
++    this->twosided->value = 0;
+   }
+   ~SoShadowGroupP() {
+     this->clearLightPaths();
+@@ -1810,6 +1815,10 @@ SoShadowGroupP::setVertexShader(SoState * state)
+   if (numshadowlights) {
+     gen.addDeclaration("uniform mat4 cameraTransform;", FALSE);
+   }
++
++  if (!this->transparentShadow())
++    gen.addDeclaration("uniform int coin_two_sided_lighting;\n", FALSE);
++
+   gen.addDeclaration("varying vec3 ecPosition3;", FALSE);
+   gen.addDeclaration("varying vec3 fragmentNormal;", FALSE);
+   gen.addDeclaration("varying vec3 perVertexColor;", FALSE);
+@@ -1834,6 +1843,22 @@ SoShadowGroupP::setVertexShader(SoState * state)
+ 
+   gen.addMainStatement("fragmentNormal = normal;");
+ 
++  gen.addMainStatement(
++      "vec4 sceneColor = gl_FrontLightModelProduct.sceneColor;\n"
++      "vec4 mambient = gl_FrontMaterial.ambient;\n"
++      "vec4 mspecular = gl_FrontMaterial.specular;\n"
++      "if (normal.z < 0.0 ");
++  if (!this->transparentShadow())
++    gen.addMainStatement(
++        "&& coin_two_sided_lighting != 0");
++  gen.addMainStatement(
++      ") {\n"
++      "   normal = -normal;\n"
++      "   sceneColor = gl_BackLightModelProduct.sceneColor;\n"
++      "   mambient = gl_BackMaterial.ambient;\n"
++      "   mspecular = gl_BackMaterial.specular;\n"
++      "}\n");
++
+   if (!perpixelother) {
+     for (i = 0; i < lights.getLength(); i++) {
+       SoLight * l = (SoLight*) lights[i];
+@@ -1861,14 +1886,14 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     if (dirlight) gen.addNamedFunction(SbName("lights/DirectionalLight"), FALSE);
+     if (pointlight) gen.addNamedFunction(SbName("lights/PointLight"), FALSE);
+ 
+-    gen.addMainStatement("color = gl_FrontLightModelProduct.sceneColor + "
+-                         "  accambient * gl_FrontMaterial.ambient + "
++    gen.addMainStatement("color = sceneColor + "
++                         "  accambient * mambient + "
+                          "  accdiffuse * gl_Color +"
+-                         "  accspecular * gl_FrontMaterial.specular;\n"
++                         "  accspecular * mspecular;\n"
+                          );
+   }
+   else {
+-    gen.addMainStatement("color = gl_FrontLightModelProduct.sceneColor;\n");
++    gen.addMainStatement("color = sceneColor;\n");
+   }
+ 
+   if (numshadowlights) {
+@@ -1917,12 +1942,9 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     }
+   }
+ 
+-  if (numshadowlights) {
++  this->vertexshader->parameter.setNum(0);
++  if (numshadowlights)
+     this->vertexshader->parameter.set1Value(0, this->cameratransform);
+-  }
+-  else {
+-    this->vertexshader->parameter.setNum(0);
+-  }
+ 
+   if (!perpixelspot) {
+     for (i = 0; i < numshadowlights; i++) {
+@@ -1953,6 +1975,9 @@ SoShadowGroupP::setVertexShader(SoState * state)
+     }
+   }
+ 
++  if (!this->transparentShadow())
++    this->vertexshader->parameter.set1Value(this->vertexshader->parameter.getNum(), this->twosided);
++
+   // never update unless the program has actually changed. Creating a
+   // new GLSL program is very slow on current drivers.
+   if (this->vertexshader->sourceProgram.getValue() != gen.getShaderProgram()) {
+@@ -2000,11 +2025,6 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   int numshadowlights = this->shadowlights.getLength();
+   SbBool dirspot = FALSE;
+ 
+-  // ATi doesn't seem to support gl_FrontFace in hardware. We've only
+-  // verified that nVidia supports it so far.
+-  SbBool twosidetest = glue->vendor_is_nvidia && ((perpixelspot && numshadowlights) || perpixelother);
+-
+-
+   if (numshadowlights) {
+     SbString eps;
+     eps.sprintf("const float EPSILON = %f;",
+@@ -2063,9 +2083,25 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     gen.addNamedFunction("vsm/VsmLookup", FALSE);
+   }
+   gen.addMainStatement("vec3 normal = normalize(fragmentNormal);\n");
+-  if (twosidetest) {
+-    gen.addMainStatement("if (coin_two_sided_lighting != 0 && !gl_FrontFacing) normal = -normal;\n");
+-  }
++
++  gen.setVersion("#version 110");
++  gen.addMainStatement(
++      "vec4 mambient = gl_FrontMaterial.ambient;\n"
++      "vec4 mspecular = gl_FrontMaterial.specular;\n"
++      "vec3 fdx = dFdx(ecPosition3);\n"
++      "vec3 fdy = dFdy(ecPosition3);\n"
++      "vec3 faceNormal = normalize(cross(fdx,fdy));\n"
++      "if (dot (normal, faceNormal) < 0.0 ");
++  if (!this->transparentShadow())
++    gen.addMainStatement(
++        "&& coin_two_sided_lighting != 0");
++  gen.addMainStatement(
++      ") {\n"
++      "   normal = -normal;\n"
++      "   mambient = gl_BackMaterial.ambient;\n"
++      "   mspecular = gl_BackMaterial.specular;\n"
++      "}\n");
++
+   gen.addMainStatement("vec3 eye = -normalize(ecPosition3);\n");
+   gen.addMainStatement("vec4 ambient = vec4(0.0);\n"
+                        "vec4 diffuse = vec4(0.0);\n"
+@@ -2287,9 +2323,9 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+                                     "Unknown light type: %s",
+                                     l->getTypeId().getName().getString());
+         }
+-        gen.addMainStatement("color += ambient.rgb * gl_FrontMaterial.ambient.rgb + "
++        gen.addMainStatement("color += ambient.rgb * mambient.rgb + "
+                              "diffuse.rgb * mydiffuse.rgb;\n");
+-        gen.addMainStatement("scolor += specular.rgb * gl_FrontMaterial.specular.rgb;\n");
++        gen.addMainStatement("scolor += specular.rgb * mspecular.rgb;\n");
+       }
+ 
+       if (pointlight) gen.addNamedFunction(SbName("lights/PointLight"), FALSE);
+@@ -2354,9 +2390,8 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+     gen.addDeclaration("uniform sampler2D textureMap1;\n", FALSE);
+   }
+   gen.addDeclaration("uniform int coin_light_model;\n", FALSE);
+-  if (twosidetest) {
++  if (!this->transparentShadow())
+     gen.addDeclaration("uniform int coin_two_sided_lighting;\n", FALSE);
+-  }
+ 
+   if (dirspot) {
+     gen.addNamedFunction("lights/DirSpotLight", FALSE);
+@@ -2463,15 +2498,8 @@ SoShadowGroupP::setFragmentShader(SoState * state)
+   if (this->numtexunitsinscene > 1) this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), this->texunit1);
+   this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), this->lightmodel);
+ 
+-  if (twosidetest) {
+-    if (!this->twosided) {
+-      this->twosided = new SoShaderParameter1i;
+-      this->twosided->ref();
+-      this->twosided->name = "coin_two_sided_lighting";
+-      this->twosided->value = 0;
+-    }
++  if (!this->transparentShadow())
+     this->fragmentshader->parameter.set1Value(this->fragmentshader->parameter.getNum(), this->twosided);
+-  }
+ 
+   for (i = 0; i < numshadowlights; i++) {
+     SoShadowLightCache * cache = this->shadowlights[i];
+-- 
+2.23.0
+
