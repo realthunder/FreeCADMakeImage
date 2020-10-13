@@ -18,7 +18,7 @@ else
     conda create \
         -p "$appdir" \
         calculix blas=*=openblas git gitpython \
-        opencamlib matplotlib numpy scipy sympy pandas gmsh \
+        opencamlib matplotlib numpy scipy sympy pandas \
         --copy \
         --no-default-packages \
         -c freecad \
@@ -131,7 +131,19 @@ fi
 if [[ $appdir == */usr ]]; then
     appdir="$appdir/../"
 fi
-ARCH=x86_64 $apptool/AppRun $appdir -u \
-    "gh-releases-zsync|realthunder|FreeCAD_assembly3|latest|FreeCAD-asm3-Conda-Py3-Qt5-*x86_64.AppImage.zsync" \
-    ${image_name}.AppImage
+
+zsync='-u gh-releases-zsync|realthunder|FreeCAD_assembly3|latest'
+case $image_name in
+FreeCAD-asm3-Conda-Py3-Qt5-*-x86_64)
+    zsync="$zsync|FreeCAD-asm3-Conda-Py3-Qt5-*-x86_64.AppImage.zsync"
+    ;;
+FreeCAD-asm3-Daily-Conda-Py3-Qt5-*-x86_64)
+    zsync="$zsync|FreeCAD-asm3-Daily-Conda-Py3-Qt5-*-x86_64.AppImage.zsync"
+    ;;
+*)
+    zsync=
+    ;;
+esac
+
+ARCH=x86_64 $apptool/AppRun $appdir $zsync ${image_name}.AppImage
 

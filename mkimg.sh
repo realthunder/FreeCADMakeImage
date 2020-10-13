@@ -95,6 +95,8 @@ sudo=
 rebuild=
 py3=
 gitfetch=
+daily=
+forcedaily=
 while test $1; do
     arg=$1
     case "$arg" in
@@ -108,13 +110,9 @@ while test $1; do
             ;;
         sudo)
             sudo=sudo
-            shift
-            continue
             ;;
         fetch)
             gitfetch=1
-            shift
-            continue
             ;;
         conda)
             conda=${arg#*=}
@@ -130,19 +128,13 @@ while test $1; do
             if which readlink; then
                 dockerfile=`readlink -e "$dockerfile"`
             fi
-            shift
-            continue
             ;;
         docker|docker=*)
             docker=${arg#*=}
-            shift
-            continue
             ;;
         podman)
             docker_exe=podman
             docker_run="podman run --userns=keep-id --security-opt label=disable"
-            shift
-            continue
             ;;
         dist=*)
             dist=${arg#*=}
@@ -164,6 +156,13 @@ while test $1; do
             ;;
         package)
             build=3
+            ;;
+        daily)
+            daily="-Daily"
+            ;;
+        forcedaily)
+            daily="-Daily"
+            forcedaily=1
             ;;
         help)
             print_usage
@@ -212,7 +211,7 @@ prepare_remote() {
     set +x
     if test -z "$FMK_CONDA_IMG_NAME"; then
         date=$(date +%Y%m%d)
-        export FMK_CONDA_IMG_NAME=FreeCAD-$img_name-Conda-Py3-Qt5-$date.glibc2.12-x86_64
+        export FMK_CONDA_IMG_NAME=FreeCAD-$img_name$daily-Conda-Py3-Qt5-$date.glibc2.12-x86_64
     fi
     env | while read -r line; do
         if [ "${line:0:4}" = FMK_ ]; then
@@ -343,6 +342,9 @@ git_fetch() {
         if [ "$hash" != "$remote_hash" ]; then
             git fetch --depth=1 origin $branch
             git checkout -qf FETCH_HEAD
+        elif test -z $forcedaily && test $daily; then
+            echo No new commits for daily build
+            exit
         fi
     fi
     hash=$(git show -s --format=%H)
@@ -689,7 +691,7 @@ fi
 if test $conda; then
     docker_name=$conda
     date=$(date +%Y%m%d)
-    conda_img_name="FreeCAD-$img_name-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
+    conda_img_name="FreeCAD-$img_name$daily-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
 
     $sudo $docker_exe build -t $conda - << EOS
 FROM condaforge/linux-anvil-comp7
