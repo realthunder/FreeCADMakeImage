@@ -545,11 +545,11 @@ if [ "$PROGRAMFILES" != "" ]; then
     # ../VERSION file
     ../../../installwb.sh
     cd ..
-    name=FreeCAD-$img_name-Win64-$build_name-$date
+    name=FreeCAD-$img_name$daily-Win64-$build_name-$date
 
     # archive the result
     mv tmp $name
-    # 7z a ../out/$name.7z $name
+    7z a ../out/$name.7z $name
 
     exit
 fi
