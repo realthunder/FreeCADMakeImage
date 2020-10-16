@@ -22,19 +22,28 @@ if test -z "$FMK_WB_LIST"; then
     test "$FMK_WB_VER_py3_slvs" || export FMK_WB_VER_py3_slvs=0
 
     args=
+    mac=
+    conda=
     for arg in "$@"; do
         case $arg in
         mac)
             export FMK_WB_SUB_asm3=py_slvs_mac
+            mac=1
             continue
             ;;
         conda)
+            conda=1
             export FMK_WB_SUB_asm3=
             export FMK_WB_LIST=asm3
             ;;
         esac
         args="$args $arg"
     done
+    if test -z $mac && test $conda; then
+        export FMK_WB_LIST="$FMK_WB_LIST appimage_updater"
+        export FMK_WB_PATH_appimage_updater=Mod
+        export FMK_WB_URL_appimage_updater=https://github.com/looooo/freecad.appimage_updater.git
+    fi
 else
     args="$@"
 fi
