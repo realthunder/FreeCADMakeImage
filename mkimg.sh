@@ -97,6 +97,7 @@ py3=
 gitfetch=
 daily=
 forcedaily=
+sudopass="$FMK_SUDOPASS"
 while test $1; do
     arg=$1
     case "$arg" in
@@ -110,6 +111,11 @@ while test $1; do
             ;;
         sudo)
             sudo=sudo
+            ;;
+        sudofile=*)
+            sudopass=`cat ${arg#*=} | base64`
+            shift
+            continue
             ;;
         fetch)
             gitfetch=1
@@ -176,6 +182,10 @@ while test $1; do
     shift
 done
 
+if test $sudo && test "$sudopass"; then
+    sudo="echo "$sudopass" | base64 -d | sudo -S -k"
+fi
+
 img_name=${FMK_IMG_NAME:=img}
 
 repo_url=${FMK_REPO_URL:=https://github.com/FreeCAD/FreeCAD}
@@ -215,7 +225,10 @@ prepare_remote() {
     fi
     env | while read -r line; do
         if [ "${line:0:4}" = FMK_ ]; then
-            echo "export ${line%=*}=\"${line#*=}\"" >> tmp.sh
+            name=${line%=*}
+            if [ "$name" != "FMK_SUDOPASS" ]; then
+                echo "export $name=\"${line#*=}\"" >> tmp.sh
+            fi
         fi
     done
     set -x
@@ -244,9 +257,9 @@ if test "$docker"; then
         esac
     fi
     if test "$dockerfile"; then
-        $sudo $docker_exe build -t $docker -f "$dockerfile" "$(dirname "$dockerfile")"
+        bash -c "$sudo $docker_exe build -t $docker -f $dockerfile $(dirname $dockerfile)"
     else
-        $sudo $docker_exe build -t $docker -f - ./docker << EOS
+        cat << EOS > tmp.dockfile
 FROM ubuntu:$dist_ver
 
 COPY ${dist}_deps.sh .
@@ -258,7 +271,7 @@ WORKDIR /home/freecad
 
 CMD ["/bin/bash"]
 EOS
-
+        bash -c "$sudo $docker_exe build -t $docker -f $tmp.dockfile"
     fi
 
     if test "$run"; then
@@ -274,9 +287,9 @@ EOS
             run_cmd="$docker_run --rm -it -v "$run":/AppImage -v "$HOME":/shared ${docker} "
         fi
         if [ "$run" = run ]; then
-            $sudo $run_cmd bash
+            bash -c "$sudo $run_cmd bash"
         else
-            $sudo $run_cmd bash -c "/AppImage --appimage-extract && squashfs-root/AppRun"
+            bash -c "$sudo $run_cmd bash -c \"/AppImage --appimage-extract && squashfs-root/AppRun\""
         fi
         exit
     fi
@@ -287,8 +300,8 @@ EOS
     cd build/docker
     mkdir -p $docker
     find ../../ -maxdepth 1 -type f | xargs -I {} cp {} $docker/
-    $sudo $docker_run --rm -ti -v $PWD/$docker:/home/freecad/works -w /home/freecad/works \
-        $docker bash -c "./tmp.sh"
+    bash -c "$sudo $docker_run --rm -ti -v $PWD/$docker:/home/freecad/works -w /home/freecad/works \
+        $docker bash -c ./tmp.sh"
     mv $docker/build/out/* ../out/
     exit
 fi
@@ -315,11 +328,18 @@ if test $remote; then
         path=$base
     fi
 
+    if test "$sudopass"; then
+        sshcmd="FMK_SUDOPASS=${sudopass} ./tmp.sh"
+    else
+        sshcmd="./tmp.sh"
+    fi
+
+
     # pipe current directory (excluding the build directory) through
     # tar -> ssh -> remote tar, and then run the script remotely
     #
     tar --exclude='./.git' --exclude='./build' -c . |
-        ssh $host -C "mkdir -p $path;cd $path;tar xvf -;./tmp.sh"
+        ssh $host -C "mkdir -p $path;cd $path;tar xvf -;$sshcmd"
 
     [ $build -gt 1 ] || exit
 
@@ -564,15 +584,18 @@ if [ $(uname) = 'Darwin' ]; then
         conda_path=env
         . ./recipes/setup.sh
 
-        build_ver=`ls -t env/conda-bld/*/work/src/Build/Version.h 2> /dev/null | head -1`
-        if test -f "$build_ver" && \
-           ! cmp -s "$build_ver" repo/src/Build/Version.h; then
-            git_fetch "`dirname $build_ver`/../.." $repo_url $repo_branch
-            cp repo/src/Build/Version.h $build_ver
-        elif test $gitfetch; then
-            repo_path=`ls -t conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
-            if test -f $repo_path; then
-                git_fetch "`dirname $repo_path`" $repo_url $repo_branch
+        repo_path=`ls -t env/conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
+        if test -f $repo_path; then
+            repo_path=`dirname $repo_path`
+            version_file=repo/src/Build/Version.h
+            if test -f $version_file; then
+                build_ver=`ls -t env/conda-bld/freecad*/work/src/Build/Version.h 2> /dev/null | head -1`
+                if ! cmp -s "$build_ver" $version_file; then
+                    git_fetch $repo_path $repo_url $repo_branch
+                    cp $version_file $repo_path/src/Build/Version.h
+                fi
+            elif test $gitfetch; then
+                git_fetch $repo_path $repo_url $repo_branch
             fi
         fi
 
@@ -693,27 +716,31 @@ if test $conda; then
     date=$(date +%Y%m%d)
     conda_img_name="FreeCAD-$img_name$daily-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
 
-    $sudo $docker_exe build -t $conda - << EOS
+cat << EOS > tmp.dockfile 
 FROM condaforge/linux-anvil-comp7
 
 RUN yum install -y mesa-libGL-devel \
     && useradd -u $UID -ms /bin/bash conda \
     && echo 'conda:conda' |chpasswd
 EOS
+    bash -c "$sudo $docker_exe build -t $conda -f tmp.dockfile"
 
     rm -rf recipes
     cp -a ../../../conda recipes
     mkdir -p conda-bld cache
 
-    build_ver=`ls -t conda-bld/*/work/src/Build/Version.h 2> /dev/null | head -1`
-    if test -f "$build_ver" && \
-    ! cmp -s "$build_ver" repo/src/Build/Version.h; then
-        git_fetch "`dirname $build_ver`/../.." $repo_url $repo_branch
-        cp repo/src/Build/Version.h $build_ver
-    elif test $gitfetch; then
-        repo_path=`ls -t conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
-        if test -f $repo_path; then
-            git_fetch "`dirname $repo_path`" $repo_url $repo_branch
+    repo_path=`ls -t conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
+    if test -f $repo_path; then
+        repo_path=`dirname $repo_path`
+        version_file=repo/src/Build/Version.h
+        if test -f $version_file; then
+            build_ver=`ls -t conda-bld/freecad*/work/src/Build/Version.h 2> /dev/null | head -1`
+            if ! cmp -s "$build_ver" $version_file; then
+                git_fetch $repo_path $repo_url $repo_branch
+                cp $version_file $repo_path/src/Build/Version.h
+            fi
+        elif test $gitfetch; then
+            git_fetch $repo_path $repo_url $repo_branch
         fi
     fi
 
@@ -725,45 +752,56 @@ EOS
     #     fi
     # fi
 
-    cmd="export CONDA_BLD_PATH=/home/conda/conda-bld "
-    cmd+=" && export CONDA_PKGS_DIRS=/home/conda/pkgs "
-
     if test "$run"; then
         if which xhost; then
             IP=$(ifconfig en0 | grep inet | awk '$1=="inet" {print $2}')
             xhost + $IP
-            $sudo $docker_run --rm -ti -v $PWD:/home/conda -e DISPLAY=${IP}:0 \
+            bash -c "$sudo $docker_run --rm -ti -v $PWD:/home/conda -e DISPLAY=${IP}:0 \
                 -v /tmp/.X11-unix:/tmp/.X11-unix -v "$HOME":/shared \
-                --security-opt seccomp:unconfined ${conda} bash
+                --security-opt seccomp:unconfined ${conda} bash"
         else
-            $sudo $docker_run --rm -ti -v $PWD:/home/conda -v "$HOME":/shared ${conda} bash
+            bash -c "$sudo $docker_run --rm -ti -v $PWD:/home/conda -v "$HOME":/shared ${conda} bash"
         fi
         exit
     fi
 
+    cat << EOS > tmp_build.sh
+#/bin/bash
+set -ex
+export CONDA_BLD_PATH=/home/conda/conda-bld
+export CONDA_PKGS_DIRS=/home/conda/pkgs
+EOS
+    chmod +x tmp_build.sh
+
     if [ $build -ne 3 ]; then
-        cmd+="&& conda build --no-remove-work-dir --keep-old-work --cache-dir ./cache "
+        echo 
+        cmd="conda build --no-remove-work-dir --keep-old-work --cache-dir ./cache "
         if test -z $rebuild; then
             cmd+=" --dirty "
         fi
         cmd+="$conda_recipes"
+        echo "$cmd" >> tmp_build.sh
     fi
     if [ $build -gt 1 ]; then
         appdir=${FMK_CONDA_APPDIR:="AppDir_asm3"}
         rm -rf wb/*
         mkdir -p wb
         FMK_WB_BASE_PATH=wb ../../../installwb.sh
-        cmd+="&& export FMK_CONDA_IMG_NAME=$conda_img_name \
-              && export FMK_CONDA_FC_EXTRA=/home/conda/wb \
-              && export FMK_BUILD_DATE=$date \
-              && export FMK_BRANDING=$FMK_BRANDING \
-              && export FMK_CONDA_REQUIRMENTS=$FMK_CONDA_REQUIRMENTS \
-              && rm -rf $appdir \
-              && mkdir -p $appdir/usr \
-              && cp -a recipes/AppDir/* $appdir/ \
-              && recipes/install.sh $appdir/usr appimage"
+
+        cat << EOS >> tmp_build.sh
+export FMK_CONDA_IMG_NAME=$conda_img_name
+export FMK_CONDA_FC_EXTRA=/home/conda/wb
+export FMK_BUILD_DATE=$date
+export FMK_BRANDING=$FMK_BRANDING
+export FMK_CONDA_REQUIRMENTS=$FMK_CONDA_REQUIRMENTS
+rm -rf $appdir 
+mkdir -p $appdir/usr
+cp -a recipes/AppDir/* $appdir/
+recipes/install.sh $appdir/usr appimage
+EOS
     fi
-    $sudo $docker_run --rm -ti -v $PWD:/home/conda $conda /bin/bash -c "$cmd"
+
+    bash -c "$sudo $docker_run --rm -ti -v $PWD:/home/conda $conda ./tmp_build.sh"
 
     if [ $build -gt 1 ]; then
         mv ${conda_img_name}.AppImage* ../../out/
