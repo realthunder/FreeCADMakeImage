@@ -19,6 +19,7 @@ else
         -p "$appdir" \
         calculix blas=*=openblas git gitpython \
         opencamlib matplotlib numpy scipy sympy pandas \
+        appimage-updater-bridge \
         --copy \
         --no-default-packages \
         -c freecad \
