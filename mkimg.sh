@@ -616,7 +616,7 @@ if [ $(uname) = 'Darwin' ]; then
         fi
         if [ $build -gt 0 ]; then
             date=$(date +%Y%m%d)
-            app_path=FreeCAD-$img_name-OSX-Conda-Py3-Qt5-$date-x86_64
+            app_path=FreeCAD-$img_name$daily-OSX-Conda-Py3-Qt5-$date-x86_64
             cd recipes
             cp -a MacBundle $app_path
             base_path=$app_path/FreeCAD.app/Contents/Resources
