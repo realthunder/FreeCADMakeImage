@@ -15,11 +15,14 @@ if test $FMK_CONDA_REQUIRMENTS; then
         -c conda-forge \
         -y
 else
+    appimage_updater=
+    if test $appimage; then
+        appimage_updater=appimage-updater-bridge
+    fi
     conda create \
         -p "$appdir" \
         calculix blas=*=openblas git gitpython \
-        opencamlib matplotlib numpy scipy sympy pandas \
-        appimage-updater-bridge \
+        opencamlib matplotlib numpy scipy sympy pandas $appimage_updater \
         --copy \
         --no-default-packages \
         -c freecad \
