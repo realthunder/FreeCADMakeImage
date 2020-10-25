@@ -22,7 +22,11 @@ else
     conda create \
         -p "$appdir" \
         calculix blas=*=openblas git gitpython \
-        opencamlib matplotlib numpy scipy sympy pandas $appimage_updater \
+        opencamlib matplotlib-base numpy sympy pandas $appimage_updater \
+        netgen=6.2.1808 scipy=1.4.1 pythonocc-core six \
+        pyyaml ifcopenshell boost-cpp=1.72 libredwg pycollada \
+        lxml xlutils olefile requests openglider \
+        blinker opencv qt.py nine docutils \
         --copy \
         --no-default-packages \
         -c freecad \
@@ -39,6 +43,11 @@ fi
 # installing some additional libraries with pip
 conda run -p $appdir pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
 # conda run -p $appdir python -m compileall $appdir/usr/lib/python$py_ver $appdir/usr/Mod
+
+# uninstall some packages not needed
+conda uninstall -p $appdir gtk2 gdk-pixbuf llvm-tools \
+                           llvmdev clangdev clang clang-tools \
+                           clangxx libclang libllvm10 --force -y
 
 pushd "$appdir"
 
