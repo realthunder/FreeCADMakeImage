@@ -84,6 +84,11 @@ Prefix = ./../
 EOS
 cp bin/qt.conf libexec/
 
+mpmath=lib/python3.8/site-packages/mpmath/ctx_mp_python.py
+if test -f $mpmath; then
+    sed -i -e "s@other is 0@other == 0@g" $mpmath
+fi
+
 if ! test $appimage; then
     exit
 fi
