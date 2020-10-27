@@ -271,7 +271,7 @@ WORKDIR /home/freecad
 
 CMD ["/bin/bash"]
 EOS
-        bash -c "$sudo $docker_exe build -t $docker -f $tmp.dockfile"
+        bash -c "$sudo $docker_exe build -t $docker -f $tmp.dockfile ./docker"
     fi
 
     if test "$run"; then
@@ -723,14 +723,14 @@ RUN yum install -y mesa-libGL-devel \
     && useradd -u $UID -ms /bin/bash conda \
     && echo 'conda:conda' |chpasswd
 EOS
-    bash -c "$sudo $docker_exe build -t $conda -f tmp.dockfile"
+    bash -c "$sudo $docker_exe build -t $conda -f tmp.dockfile ."
 
     rm -rf recipes
     cp -a ../../../conda recipes
     mkdir -p conda-bld cache
 
     repo_path=`ls -t conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
-    if test -f $repo_path; then
+    if test "$repo_path" && test -f $repo_path; then
         repo_path=`dirname $repo_path`
         version_file=repo/src/Build/Version.h
         if test -f $version_file; then
