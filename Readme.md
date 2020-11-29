@@ -33,6 +33,11 @@ and install both `Python 2 and 3` with `Qt 5`. One thing to note is that the
 `Bionic` uses a newer `glibc`, so its `AppImage` can only run on system
 with `glibc >= 2.2`.
 
+> Note: If you have FreeCAD repository already cloned, you can reuse your download as follows: 
+> ```
+> mv /path/to/FreeCAD build/<FMK_IMG_NAME>/repo
+> ```
+
 If your host is either `Xenial` or `Bionic`, you can run the script natively.
 To install the build dependencies, run the following script,
 
