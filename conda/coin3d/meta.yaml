@@ -54,7 +54,7 @@ requirements:
         - {{ cdt('libxdamage') }}  # [linux]
         - {{ cdt('libselinux') }}  # [linux]
         - {{ cdt('libXxf86vm') }}  # [linux]
-        - cmake
+        - cmake 3.18.*
         - ninja
     host:
         - boost-cpp
