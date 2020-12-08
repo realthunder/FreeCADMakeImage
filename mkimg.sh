@@ -87,7 +87,7 @@ dockerfile=
 dist=bionic
 dist_ver=
 conda=
-conda_recipes="./recipes"
+conda_recipes=../../../conda
 build=2
 args=
 run=
@@ -175,6 +175,7 @@ while test $1; do
             exit
             ;;
         *)
+            echo unknown argument $arg
             print_usage
             exit 1
     esac
@@ -579,13 +580,13 @@ if [ $(uname) = 'Darwin' ]; then
 
     if test $conda; then
         rm -rf ./recipes
-        cp -a ../../../conda ./recipes
+        cp -a $conda_recipes ./recipes
         conda_host=MacOSX
         conda_path=env
         . ./recipes/setup.sh
 
         repo_path=`ls -t env/conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
-        if test -f $repo_path; then
+        if test "$repo_path" && test -f "$repo_path"; then
             repo_path=`dirname $repo_path`
             version_file=repo/src/Build/Version.h
             if test -f $version_file; then
@@ -612,7 +613,7 @@ if [ $(uname) = 'Darwin' ]; then
         fi
 
         if [ $build -ne 3 ]; then
-            $conda_cmd --no-remove-work-dir --keep-old-work $conda_recipes
+            $conda_cmd --no-remove-work-dir --keep-old-work ./recipes
         fi
         if [ $build -gt 0 ]; then
             date=$(date +%Y%m%d)
@@ -726,7 +727,7 @@ EOS
     bash -c "$sudo $docker_exe build -t $conda -f tmp.dockfile ."
 
     rm -rf recipes
-    cp -a ../../../conda recipes
+    cp -a $conda_recipes recipes
     mkdir -p conda-bld cache
 
     repo_path=`ls -t conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
@@ -779,7 +780,7 @@ EOS
         if test -z $rebuild; then
             cmd+=" --dirty "
         fi
-        cmd+="$conda_recipes"
+        cmd+="./recipes"
         echo "$cmd" >> tmp_build.sh
     fi
     if [ $build -gt 1 ]; then
