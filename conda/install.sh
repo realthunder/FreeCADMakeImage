@@ -23,7 +23,7 @@ else
         -p "$appdir" \
         calculix blas=*=openblas git gitpython \
         opencamlib matplotlib-base numpy sympy pandas $appimage_updater \
-        netgen=6.2.1808 scipy=1.4.1 pythonocc-core six \
+        gmsh netgen=6.2.1808 scipy=1.4.1 pythonocc-core six \
         pyyaml ifcopenshell boost-cpp=1.72 libredwg pycollada \
         lxml xlutils olefile requests openglider \
         blinker opencv qt.py nine docutils \
@@ -71,6 +71,7 @@ cp bin_tmp/ccx bin/
 cp bin_tmp/python bin/
 cp bin_tmp/pip bin/
 cp bin_tmp/pyside2-rcc bin/
+cp bin_tmp/gmsh bin/
 # cp bin_tmp/assistant bin/
 sed -i.bak -e '1s|.*|#!/usr/bin/env python|' bin/pip && rm bin/pip.bak
 rm -rf bin_tmp
