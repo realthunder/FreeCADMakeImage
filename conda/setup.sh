@@ -1,6 +1,8 @@
 test "$conda_host" || conda_host=MacOSX
 test "$conda_path" || conda_path=env
 
+cp ./recipes/freecad_asm3/meta-osx.yaml ./recipes/freecad_asm3/meta.yaml
+
 conda_cmd=
 if test -e $conda_path/bin/conda; then
     source $conda_path/etc/profile.d/conda.sh
