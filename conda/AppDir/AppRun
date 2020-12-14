@@ -24,10 +24,9 @@ elif [ "$1" = 'cmd' ]; then
     shift
     name=${name}Cmd
 fi
-cd $PREFIX/bin
-if test -e "$name"Link; then
-    ./"$name"Link "$@"
+if test -e "$PREFIX/bin/$name"Link; then
+    "$PREFIX/bin/$name"Link "$@"
 else
-    ./$name "$@"
+    "$PREFIX/bin/$name" "$@"
 fi
 
