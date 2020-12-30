@@ -5,12 +5,18 @@ export PREFIX=$HERE/usr
 export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 export PYTHONHOME=$PREFIX
 export GSETTINGS_SCHEMA_DIR=$PREFIX/share/glib-2.0/schemas:$GSETTINGS_SCHEMA_DIR
-export QT_PLUGIN_PATH=$PREFIX/plugins
-export QT_XKB_CONFIG_ROOT=$PREFIX/lib
+# export QT_PLUGIN_PATH=$PREFIX/plugins
+# export QT_XKB_CONFIG_ROOT=$PREFIX/lib
 export FONTCONFIG_FILE=/etc/fonts/fonts.conf
 export FONTCONFIG_PATH=/etc/fonts
-export GIT_SSL_CAINFO=$PREFIX/ssl/cacert.pem
 export PYTHONDONTWRITEBYTECODE=1
+
+# SSL
+# https://forum.freecadweb.org/viewtopic.php?f=4&t=34873&start=20#p327416
+export SSL_CERT_FILE=$PREFIX/ssl/cacert.pem
+# https://github.com/FreeCAD/FreeCAD-AppImage/pull/20
+export GIT_SSL_CAINFO=$HERE/usr/ssl/cacert.pem
+
 #export GDK_PIXBUF_MODULE_FILE=$PREFIX/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache
 #export QT_QPA_PLATFORMTHEME=gtk2
 #export GTK_PATH=$PREFIX/lib/gtk-2.0
