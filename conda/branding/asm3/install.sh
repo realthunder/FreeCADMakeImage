@@ -11,7 +11,8 @@ if test $FMK_BUILD_DATE; then
     sed -i -e "s@_FC_BUILD_DATE_@$FMK_BUILD_DATE@g" $dst/bin/branding.xml
 fi
 cp $src/branding/* $dst/
-cp $src/AppDir/* $dst/
+rm -f $dst/../freecad_conda.desktop $dst/../freecad_conda.png
+cp $src/AppDir/freecad_link.desktop $src/AppDir/freecad_link.png $dst/../
 
 if test -d $dst/share; then
     cp -a $src/icons $dst/share/
