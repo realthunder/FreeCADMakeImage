@@ -26,7 +26,7 @@ else
         gmsh netgen=6.2.1808 scipy=1.4.1 pythonocc-core six \
         pyyaml ifcopenshell boost-cpp=1.72 libredwg pycollada \
         lxml xlutils olefile requests openglider \
-        blinker opencv qt.py nine docutils \
+        blinker opencv qt.py nine docutils jupyter notebook \
         --copy \
         --no-default-packages \
         -c freecad \
@@ -42,12 +42,34 @@ fi
 
 # installing some additional libraries with pip
 conda run -p $appdir pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
+
+# 
+conda run -p $appdir pip install git+https://github.com/realthunder/freecad_jupyter
+jupyter_dir=$appdir/share/jupyter/kernels/
+rm -rf $jupyter_dir/*
+mkdir -p $jupyter_dir/freecad
+cat > $jupyter_dir/freecad/kernel.json <<EOS
+{
+ "argv": [
+  "python",
+  "-m",
+  "freecad_jupyter",
+  "-f",
+  "{connection_file}"
+ ],
+ "display_name": "FreeCAD",
+ "language": "python"
+}
+EOS
+
 # conda run -p $appdir python -m compileall $appdir/usr/lib/python$py_ver $appdir/usr/Mod
 
 # uninstall some packages not needed
 conda uninstall -p $appdir gtk2 gdk-pixbuf llvm-tools \
                            llvmdev clangdev clang clang-tools \
                            clangxx libclang libllvm10 --force -y
+
+conda list -e -p $appdir > $appdir/packages.txt
 
 pushd "$appdir"
 
@@ -72,8 +94,10 @@ cp bin_tmp/python bin/
 cp bin_tmp/pip bin/
 cp bin_tmp/pyside2-rcc bin/
 cp bin_tmp/gmsh bin/
+cp bin_tmp/jupyter* bin/
 # cp bin_tmp/assistant bin/
 sed -i.bak -e '1s|.*|#!/usr/bin/env python|' bin/pip && rm bin/pip.bak
+sed -i -e '1s|.*|#!/usr/bin/env python|' bin/jupyter*
 rm -rf bin_tmp
 
 # we use qt.conf for qt binary relocation. The one inside `bin` is for FreeCAD,
