@@ -43,24 +43,25 @@ fi
 # installing some additional libraries with pip
 conda run -p $appdir pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
 
-# 
-conda run -p $appdir pip install git+https://github.com/realthunder/freecad_jupyter
-jupyter_dir=$appdir/share/jupyter/kernels/
-rm -rf $jupyter_dir/*
-mkdir -p $jupyter_dir/freecad
-cat > $jupyter_dir/freecad/kernel.json <<EOS
+jupyter_dir=$appdir/share/jupyter/kernels
+if test -f $jupyter_dir; then
+    conda run -p $appdir pip install git+https://github.com/realthunder/freecad_jupyter
+    rm -rf $jupyter_dir/*
+    mkdir -p $jupyter_dir/freecad
+    cat > $jupyter_dir/freecad/kernel.json <<EOS
 {
- "argv": [
-  "python",
-  "-m",
-  "freecad_jupyter",
-  "-f",
-  "{connection_file}"
- ],
- "display_name": "FreeCAD",
- "language": "python"
+    "argv": [
+    "python",
+    "-m",
+    "freecad_jupyter",
+    "-f",
+    "{connection_file}"
+    ],
+    "display_name": "FreeCAD",
+    "language": "python"
 }
 EOS
+fi
 
 # conda run -p $appdir python -m compileall $appdir/usr/lib/python$py_ver $appdir/usr/Mod
 
@@ -94,10 +95,12 @@ cp bin_tmp/python bin/
 cp bin_tmp/pip bin/
 cp bin_tmp/pyside2-rcc bin/
 cp bin_tmp/gmsh bin/
-cp bin_tmp/jupyter* bin/
-# cp bin_tmp/assistant bin/
 sed -i.bak -e '1s|.*|#!/usr/bin/env python|' bin/pip && rm bin/pip.bak
-sed -i -e '1s|.*|#!/usr/bin/env python|' bin/jupyter*
+if test -f bin_tmp/jupyter; then
+    cp bin_tmp/jupyter* bin/
+    sed -i -e '1s|.*|#!/usr/bin/env python|' bin/jupyter*
+fi
+# cp bin_tmp/assistant bin/
 rm -rf bin_tmp
 
 # we use qt.conf for qt binary relocation. The one inside `bin` is for FreeCAD,
