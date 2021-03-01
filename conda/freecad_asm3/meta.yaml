@@ -36,7 +36,7 @@ requirements:
     - occt
     - xerces-c
     - zlib
-    - vtk
+    - vtk 8.2
     - swig
     - eigen
     - pybind11
@@ -53,10 +53,10 @@ requirements:
     - tbb-devel
     - blas * openblas
     - freetype
-    - libspnav
+    - libspnav # [linux]
   run:
     - {{ pin_compatible("pyside2") }}
-    - vtk
+    - vtk 8.2
     - occt
     - qt
     - xerces-c
@@ -79,7 +79,7 @@ requirements:
     - ply
     - opencamlib
     # - solvespace
-    - libspnav
+    - libspnav # [linux]
 
 test:
   commands:
