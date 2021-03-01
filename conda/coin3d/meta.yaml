@@ -1,6 +1,7 @@
 {% set name = "coin3d" %}
 {% set version = "4.0.0" %}
-{% set sha256 = "b00d2a8e9d962397cf9bf0d9baa81bcecfbd16eef675a98c792f5cf49eb6e805" %}
+{% set build = "20210228" %}
+{% set sha256 = "250b669241a91ba7942ad44dc83ec18f25531c8438bbdc6da5708b3e1e482f8c" %}
 {% set version_superglue = "1.3.0" %}
 {% set sha256_superglue = "f408adcfb706e7c781db9c218ef9e8ba56d43995ccb61dffad5f6154c34f17d6" %}
 
@@ -9,32 +10,8 @@ package:
     version: {{ version }}
 
 source:
-    - url: https://github.com/coin3d/coin/archive/Coin-{{ version }}.tar.gz
+    - url: https://github.com/realthunder/coin/archive/Coin-{{ build }}.tar.gz
       sha256: {{ sha256 }}
-      patches:
-        - 0001-cpack.d-is-now-optional.patch
-        - 0002-Add-new-shadow-style-TRANSPARENT_SHADOWED.patch
-        - 0003-Fix-bump-map-rendering-when-being-shadowed.patch
-        - 0004-Support-shadow-rendering-when-shading-is-off.patch
-        - 0005-Workaround-graphics-driver-bug-when-render-shadow-wi.patch
-        - 0006-Improve-directional-light-update-efficiency-when-ren.patch
-        - 0007-Refactor-smoothBorder-in-SoShadowGroup.patch
-        - 0008-Apply-shadow-style-changes-in-SoShadowStyleElement.patch
-        - 0009-Add-missing-shader-function-in-SoShadowGroup.patch
-        - 0010-Refresh-shadow-light-cache-on-change-of-precision.patch
-        - 0011-Remove-shadow-spot-light-angle-restriction.patch
-        - 0012-Fix-SbDPViewVolume-zNarrow.patch
-        - 0013-Allow-using-SoDirectionalLight-in-SoShadowGroup.patch
-        - 0014-Narrow-directional-light-camera-view-box-in-shadow-r.patch
-        - 0015-Fix-shadow-map-smooth-border-with-gaussian-blur.patch
-        - 0016-Fix-transparent-SoShape-losing-per-line-point-color.patch
-        - 0017-Support-transparent-shadow-rendering.patch
-        - 0018-Fix-memory-leak-in-SoShadowGroup.patch
-        - 0019-Fix-shadow-two-sided-lighting.patch
-        - 0020-Disable-per-vertex-shadow.patch
-        - 0021-Fix-transparent-shadow-color-blending.patch
-        - 0022-Fix-missing-alpha-shadow-clearing.patch
-
 
     - url: https://github.com/coin3d/superglu/archive/superglu-{{ version_superglue }}.tar.gz
       sha256: {{ sha256_superglue }}
@@ -43,7 +20,7 @@ source:
         - superglue.patch
 
 build:
-    number: 1010
+    number: {{ build }}
     skip: true  # [win and py<35]
 
 requirements:
