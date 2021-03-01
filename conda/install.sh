@@ -34,7 +34,7 @@ else
         -y
 fi
 
-conda install -p $appdir --use-local coin3d freecad-asm3 solvespace -y
+conda install -p $appdir --use-local coin3d freecad-asm3 solvespace fcitx-qt5 -y
 
 if test "$FMK_CONDA_FC_EXTRA"; then
     cp -a "$FMK_CONDA_FC_EXTRA"/* $appdir
