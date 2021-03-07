@@ -438,9 +438,13 @@ if [ "$PROGRAMFILES" != "" ]; then
 
         get_cmake "3.14.5"
 
-        url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19_pre/FreeCADLibs_12.1.2_x64_VC15.7z}
-        vs=15
-        vs_name="15 2017"
+        # url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19_pre/FreeCADLibs_12.1.2_x64_VC15.7z}
+        # vs=15
+        # vs_name="15 2017"
+        url=${FMK_LIBPACK_URL:=https://github.com/apeltauer/FreeCAD/releases/download/LibPack_12.4.2/FreeCADLibs_12.4.2_x64_VC17.7z}
+        vs=17
+        vs_name="16 2019"
+
         if ! test -d libpack$vs; then
             wget -c $url -O libpack$vs.7z
             mkdir -p libpack$vs
@@ -476,7 +480,7 @@ if [ "$PROGRAMFILES" != "" ]; then
     if ! test -f FreeCAD_trunk.sln; then
         export FREECAD_LIBPACK_DIR=$libpack
         "$cmake" \
-            -G "Visual Studio $vs_name Win64" \
+            -G "Visual Studio $vs_name" -A x64 \
             -DFREECAD_LIBPACK_DIR=$libpack \
             -DOCC_INCLUDE_DIR=$libpack/include/opencascade \
             -DPYTHON_EXECUTABLE=$libpack/bin/python.exe \
