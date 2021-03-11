@@ -12,6 +12,11 @@
     <SplashScreen>freecad_link_splash.png</SplashScreen>
     <BuildRevisionDate>_FC_BUILD_DATE_</BuildRevisionDate>
     <VendorCFGPrefix>link.</VendorCFGPrefix>
+    <SplashInfoColor>#101010</SplashInfoColor>
+    <SplashTextColor>#000000</SplashTextColor>
+    <SplashInfoPosition>12 38</SplashInfoPosition>
+    <SplashInfoExeName>FreeCAD Link Branch</SplashInfoExeName>
+    <SplashInfoVersion>_FC_VERSION_MAJOR_._FC_VERSION_MINOR2_</SplashInfoVersion>
 <!--
     <BuildRevision>_FC_REVISION_</BuildRevision>
     <StartWorkbench>PartWorkbench</StartWorkbench>
