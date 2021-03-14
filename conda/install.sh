@@ -48,7 +48,7 @@ fi
 conda run -p $appdir pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
 
 jupyter_dir=$appdir/share/jupyter/kernels
-if test -f $jupyter_dir; then
+if test -d $jupyter_dir; then
     conda run -p $appdir pip install git+https://github.com/realthunder/freecad_jupyter
     rm -rf $jupyter_dir/*
     mkdir -p $jupyter_dir/freecad
@@ -65,6 +65,10 @@ if test -f $jupyter_dir; then
     "language": "python"
 }
 EOS
+    py3kernel=$jupyter_dir/python3/kernel.json
+    if test -f $py3kernel; then
+        sed -i -e '1s|././././././././././././/../bin/python|python|' $py3kernel
+    fi
 fi
 
 # conda run -p $appdir python -m compileall $appdir/usr/lib/python$py_ver $appdir/usr/Mod
