@@ -1,0 +1,66 @@
+From 3f48f91861adc5022a48ef32b5db61935aa7740f Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Wed, 17 Mar 2021 07:54:50 +0800
+Subject: [PATCH] Fix polygon offset in bump map rendering
+
+---
+ src/shapenodes/soshape_bumprender.cpp | 32 +++++++++++++++++++++++----
+ 1 file changed, 28 insertions(+), 4 deletions(-)
+
+diff --git a/src/shapenodes/soshape_bumprender.cpp b/src/shapenodes/soshape_bumprender.cpp
+index 718d303..4c3362e 100644
+--- a/src/shapenodes/soshape_bumprender.cpp
++++ b/src/shapenodes/soshape_bumprender.cpp
+@@ -449,10 +449,22 @@ soshape_bumprender::renderBumpSpecular(SoState * state,
+         SoGLShaderProgramElement::enable(state, FALSE);
+         restoreShader = true;
+     }
++    SoPolygonOffsetElement::Style style;
++    float factor;
++    float units;
++    SbBool on;
++    SoPolygonOffsetElement::get(state, factor, units, style, on);
++    if (on && (style & SoPolygonOffsetElement::FILLED)) {
++        factor *= 1.5f;
++        units += 1.0f;
++    } else {
++        factor = 1.0f;
++        units = 1.0f;
++    }
+     SoPolygonOffsetElement::set(state, 
+                                 0, 
+-                                1.0,
+-                                1.0,
++                                factor,
++                                units,
+                                 SoPolygonOffsetElement::FILLED,
+                                 TRUE);
+   }
+@@ -625,10 +637,22 @@ soshape_bumprender::renderBump(SoState * state,
+         SoGLShaderProgramElement::enable(state, FALSE);
+         restoreShader = true;
+     }
++    SoPolygonOffsetElement::Style style;
++    float factor;
++    float units;
++    SbBool on;
++    SoPolygonOffsetElement::get(state, factor, units, style, on);
++    if (on && (style & SoPolygonOffsetElement::FILLED)) {
++        factor *= 1.5f;
++        units += 2.0f;
++    } else {
++        factor = 1.0f;
++        units = 1.0f;
++    }
+     SoPolygonOffsetElement::set(state, 
+                                 0, 
+-                                1.0,
+-                                1.0,
++                                factor,
++                                units,
+                                 SoPolygonOffsetElement::FILLED,
+                                 TRUE);
+   }
+-- 
+2.23.0
+
