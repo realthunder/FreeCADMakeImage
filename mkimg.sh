@@ -94,6 +94,7 @@ run=
 sudo=
 rebuild=
 py3=
+vc17=
 gitfetch=
 daily=
 forcedaily=
@@ -108,6 +109,9 @@ while test $1; do
             ;;
         py3)
             py3=1
+            ;;
+        vc17)
+            vc17=1
             ;;
         sudo)
             sudo=sudo
@@ -438,27 +442,32 @@ if [ "$PROGRAMFILES" != "" ]; then
 
         get_cmake "3.14.5"
 
-        # url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19_pre/FreeCADLibs_12.1.2_x64_VC15.7z}
-        # vs=15
-        # vs_name="15 2017"
-        url=${FMK_LIBPACK_URL:=https://github.com/apeltauer/FreeCAD/releases/download/LibPack_12.4.2/FreeCADLibs_12.4.2_x64_VC17.7z}
-        vs=17
-        vs_name="16 2019"
+        if test -z $vc17; then
+            url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19_pre/FreeCADLibs_12.1.2_x64_VC15.7z}
+            vs=15
+            vs_name="Visual Studio 15 2017 Win64"
+            build_name="Py3-Qt5.12"
+        else
+            url=${FMK_LIBPACK_URL:=https://github.com/apeltauer/FreeCAD/releases/download/LibPack_12.4.2/FreeCADLibs_12.4.2_x64_VC17.7z}
+            vs=17
+            vs_name="Visual Studio 16 2019"
+            vs_arch="-A x64"
+            build_name="Py3-Qt5.15"
+        fi
 
         if ! test -d libpack$vs; then
             wget -c $url -O libpack$vs.7z
             mkdir -p libpack$vs
             (cd libpack$vs && 7z x ../libpack$vs.7z)
         fi
-
-        build_name="Py3-Qt5"
     else
         get_cmake "3.10.3"
 
         # url=${FMK_LIBPACK_URL:=https://github.com/sgrogan/FreeCAD/releases/download/0.17-med-test/FreeCADLibs_11.5.3_x64_VC12.7z}
         url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD-ports-cache/releases/download/v0.18/FreeCADLibs_11.11_x64_VC12.7z}
         vs=
-        vs_name="12 2013"
+        vs_name="Visual Studio 12 2013 Win64"
+        vs_arch=
         if ! test -d libpack; then
             wget -c $url -O libpack.7z
             7z x libpack.7z
@@ -480,7 +489,7 @@ if [ "$PROGRAMFILES" != "" ]; then
     if ! test -f FreeCAD_trunk.sln; then
         export FREECAD_LIBPACK_DIR=$libpack
         "$cmake" \
-            -G "Visual Studio $vs_name" -A x64 \
+            -G "$vs_name" $vs_arch \
             -DFREECAD_LIBPACK_DIR=$libpack \
             -DOCC_INCLUDE_DIR=$libpack/include/opencascade \
             -DPYTHON_EXECUTABLE=$libpack/bin/python.exe \
