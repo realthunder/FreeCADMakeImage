@@ -26,6 +26,9 @@ export GIT_SSL_CAINFO=$HERE/usr/ssl/cacert.pem
 #export XDG_DATA_DIRS=$PREFIX/share/:$XDG_DATA_DIRS
 
 name=FreeCAD
+if [ "${ARGV0#*NoHDPI*}" = "$ARGV0" ]; then
+    export QT_AUTO_SCREEN_SCALE_FACTOR=1
+fi
 if [ ! -z "$1" ] && [ -e "$PREFIX/bin/$1" ] ; then
     name=$1
     shift
