@@ -578,6 +578,18 @@ if [ "$PROGRAMFILES" != "" ]; then
     # install personal workbench. This script will write version string to
     # ../VERSION file
     ../../../installwb.sh
+
+    cat << EOS > RunFreeCAD.bat 
+cd %~dp0/bin
+FreeCADLink.exe
+EOS
+    cat << EOS > RunJupyter.bat 
+set QT_AUTO_SCREEN_SCALE_FACTOR=1
+cd %~dp0/bin
+python.exe -m jupyter notebook
+EOS
+    cp ../../../misc/FreeCADInit.ipynb bin/
+
     cd ..
     name=FreeCAD-$img_name$daily-Win64-$build_name-$date
 
