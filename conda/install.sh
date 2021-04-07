@@ -34,7 +34,7 @@ else
         -y
 fi
 
-local_pkgs="coin3d freecad-asm3 solvespace"
+local_pkgs="coin3d $FMK_FREECAD_PKGNAME solvespace"
 if test $appimage; then
     local_pkgs="$local_pkgs fcitx-qt5"
 fi

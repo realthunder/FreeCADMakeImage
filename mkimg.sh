@@ -99,6 +99,7 @@ gitfetch=
 daily=
 forcedaily=
 sudopass="$FMK_SUDOPASS"
+
 while test $1; do
     arg=$1
     case "$arg" in
@@ -173,6 +174,9 @@ while test $1; do
         forcedaily)
             daily="-Daily"
             forcedaily=1
+            ;;
+        branch=*)
+            export FMK_REPO_BRANCH=${arg#branch=}
             ;;
         help)
             print_usage
@@ -353,6 +357,13 @@ if test $remote; then
     exit
 fi
 
+if test -z $FMK_FREECAD_PKGNAME; then
+    export FMK_FREECAD_PKGNAME='freecad-asm3'
+fi
+if test $daily; then
+    FMK_FREECAD_PKGNAME="${FMK_FREECAD_PKGNAME}-daily"
+fi
+
 git_fetch() {
     local dir=$1
     local url=$2
@@ -389,19 +400,32 @@ fi
 mkdir -p build/$build_dir
 cd build/$build_dir
 
+# check for windows building
+if uname -a | grep -q CYGWIN; then
+    win=cygwin
+elif uname -a | grep -q Microsoft; then
+    win=wsl
+fi
+
+if test $win; then 
+    repo=repo$daily
+else
+    repo=repo
+fi
+
 # prepare freecad repo
-git_fetch repo $repo_url $repo_branch
+git_fetch $repo $repo_url $repo_branch
 
 if test "$FMK_VERSION_HEADER"; then
     if ! test -f "$FMK_VERSION_HEADER"; then
         echo "Cannot find version header: $FMK_VERSION_HEADER"
         exit 1
     fi
-    if ! cmp -s "$FMK_VERSION_HEADER" repo/src/Build/Version.h; then
-        cp -f $FMK_VERSION_HEADER repo/src/Build/Version.h
+    if ! cmp -s "$FMK_VERSION_HEADER" $repo/src/Build/Version.h; then
+        cp -f $FMK_VERSION_HEADER $repo/src/Build/Version.h
     fi
 else
-    rm -f repo/src/Build/Version.h
+    rm -f $repo/src/Build/Version.h
 fi
 
 # save the last commit hash
@@ -410,13 +434,9 @@ repo_hash=$hash
 export FMK_REPO_HASH=${hash:0:8}
 
 # check for windows building
-if [ "$PROGRAMFILES" != "" ]; then 
+if test $win; then 
 
     pushd ../
-    if [ "$PROCESSOR_ARCHITECTURE" != "AMD64" ]; then
-        echo "only support building on Windows x64"
-        exit 1
-    fi
 
     # cmake=${FMK_CMAKE_EXE:=`echo /cygdrive/c/program\ files/*/bin/cmake.exe`}
     # if ! test -e "$cmake"; then
@@ -448,7 +468,8 @@ if [ "$PROGRAMFILES" != "" ]; then
             vs_name="Visual Studio 15 2017 Win64"
             build_name="Py3-Qt5.12"
         else
-            url=${FMK_LIBPACK_URL:=https://github.com/apeltauer/FreeCAD/releases/download/LibPack_12.4.2/FreeCADLibs_12.4.2_x64_VC17.7z}
+            # url=${FMK_LIBPACK_URL:=https://github.com/apeltauer/FreeCAD/releases/download/LibPack_12.4.2/FreeCADLibs_12.4.2_x64_VC17.7z}
+            url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19.1/FreeCADLibs_12.5.3_x64_VC17.7z}
             vs=17
             vs_name="Visual Studio 16 2019"
             vs_arch="-A x64"
@@ -457,8 +478,8 @@ if [ "$PROGRAMFILES" != "" ]; then
 
         if ! test -d libpack$vs; then
             wget -c $url -O libpack$vs.7z
-            mkdir -p libpack$vs
-            (cd libpack$vs && 7z x ../libpack$vs.7z)
+            7z x ../libpack$vs.7z
+            mv FreeCADLibs* libpack$vs
         fi
     else
         get_cmake "3.10.3"
@@ -477,22 +498,27 @@ if [ "$PROGRAMFILES" != "" ]; then
         build_name="Py2-Qt4"
     fi
 
-    libpack=$(cygpath -w $PWD/libpack$vs)
+    libpack=$PWD/libpack$vs
     echo $libpack
 
     popd
 
     branding=$PWD/../../conda/branding
-    mkdir -p repo/build$vs
-    pushd repo/build$vs
+    mkdir -p $repo/build$vs
+    pushd $repo/build$vs
 
     if ! test -f FreeCAD_trunk.sln; then
-        export FREECAD_LIBPACK_DIR=$libpack
+        if [ $win = cygwin ]; then
+            libpackpath=$(cygpath -w $libpack)
+        else
+            libpackpath=$(wslpath -m $libpack)
+        fi
+        export FREECAD_LIBPACK_DIR=$libpackpath
         "$cmake" \
             -G "$vs_name" $vs_arch \
-            -DFREECAD_LIBPACK_DIR=$libpack \
-            -DOCC_INCLUDE_DIR=$libpack/include/opencascade \
-            -DPYTHON_EXECUTABLE=$libpack/bin/python.exe \
+            -DFREECAD_LIBPACK_DIR=$libpackpath \
+            -DOCC_INCLUDE_DIR=$libpackpath/include/opencascade \
+            -DPYTHON_EXECUTABLE=$libpackpath/bin/python.exe \
             ..
     fi
 
@@ -606,16 +632,21 @@ if [ $(uname) = 'Darwin' ]; then
     if test $conda; then
         rm -rf ./recipes
         cp -a $conda_recipes ./recipes
+
+        if test -f ./recipes/freecad_asm3/meta.yaml; then
+            sed -i -e "s|freecad-asm3|$FMK_FREECAD_PKGNAME|" ./recipes/freecad_asm3/meta.yaml
+        fi
+
         conda_host=MacOSX
         conda_path=env
         . ./recipes/setup.sh
 
-        repo_path=`ls -t env/conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
+        repo_path=`ls -t env/conda-bld/${FMK_FREECAD_PKGNAME}_*/work/CMakeLists.txt 2> /dev/null | head -1`
         if test "$repo_path" && test -f "$repo_path"; then
             repo_path=`dirname $repo_path`
-            version_file=repo/src/Build/Version.h
+            version_file=$repo/src/Build/Version.h
             if test -f $version_file; then
-                build_ver=`ls -t env/conda-bld/freecad*/work/src/Build/Version.h 2> /dev/null | head -1`
+                build_ver=`ls -t env/conda-bld/${FMK_FREECAD_PKGNAME}_*/work/src/Build/Version.h 2> /dev/null | head -1`
                 if ! cmp -s "$build_ver" $version_file; then
                     git_fetch $repo_path $repo_url $repo_branch
                     cp $version_file $repo_path/src/Build/Version.h
@@ -665,42 +696,48 @@ if [ $(uname) = 'Darwin' ]; then
         exit
     fi
 
+    branding=$PWD/../../conda/branding
+
     export CXX=clang++
     export CC=clang
     export PATH=/usr/lib/ccache:/usr/local/bin:$PATH
 
-    mkdir -p repo/build
-    pushd repo/build
+    mkdir -p $repo/build
+    pushd $repo/build
 
-    QT5_CMAKE_PREFIX=$(ls -d $(brew --cellar)/qt/*/lib/cmake)
-    QT5_WEBKIT_CMAKE_PREFIX=$(ls -d $(brew --cellar)/qtwebkit/*/lib/cmake)
-    INSTALL_PREFIX="../../tmp"
+    INSTALL_PREFIX="$PWD/../../tmp"
     mkdir -p "$INSTALL_PREFIX"
 
-   if ! read rhash &>/dev/null < .configure.hash || [ "$rhash" != $repo_hash ]; then
+    if ! read rhash &>/dev/null < .configure.hash || [ "$rhash" != $repo_hash ]; then
+		QT5_CMAKE_PREFIX=`ls -d $(brew list -1 | grep qt | tail -1 | xargs brew --cellar)/*/lib/cmake`
+		VTK_CMAKE_PREFIX=`ls -d $(brew list -1 | grep vtk | tail -1 | xargs brew --cellar)/*/lib/cmake`
+		NGLIB_CMAKE_PREFIX=`ls -d $(brew list -1 | grep nglib | tail -1 | xargs brew --cellar)/*/Contents/Resources/CMake`
+		PREFIX_PATH="$QT5_CMAKE_PREFIX;/usr/local/opt/qt/lib/cmake/;$VTK_CMAKE_PREFIX;$NGLIB_CMAKE_PREFIX"
+
         cmake \
-        -DCMAKE_BUILD_TYPE="Release"   \
-        -DBUILD_QT5=1                  \
-        -DCMAKE_PREFIX_PATH="${QT5_CMAKE_PREFIX};${QT5_WEBKIT_CMAKE_PREFIX}"  \
-        -DFREECAD_USE_EXTERNAL_KDL=1   \
-        -DBUILD_FEM_NETGEN=1           \
-        -DFREECAD_CREATE_MAC_APP=1     \
-        -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX"  \
-        ../
+            -DCMAKE_BUILD_TYPE="Release"   \
+            -DBUILD_QT5=1                  \
+            -DCMAKE_PREFIX_PATH="$PREFIX_PATH"  \
+            -DFREECAD_USE_EXTERNAL_KDL=1   \
+            -DBUILD_FEM_NETGEN=1           \
+            -DFREECAD_CREATE_MAC_APP=1     \
+            -DPYTHON_EXECUTABLE="/usr/local/bin/python3" \
+            -DBUILD_ENABLE_CXX_STD=C++14  \
+            -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX"  \
+            -DFREECAD_USE_3DCONNEXION=ON \
+            -D3DCONNEXIONCLIENT_FRAMEWORK="/Library/Frameworks/3DconnexionClient.framework" \
+            -DBoost_NO_BOOST_CMAKE=ON \
+            ../
 
         echo "$repo_hash" > .configure.hash
     fi
 
     [ $build -gt 0 ] || exit
 
-    ncpu=$(sysctl hw.ncpu | awk '{print $2}')
-    [ "$ncpu" != "1" ] || ncpu=2
+    if [ $build = 1 ]; then
+        ncpu=$(sysctl hw.ncpu | awk '{print $2}')
+        [ "$ncpu" != "1" ] || ncpu=2
 
-    do_build=
-    if ! read rhash &>/dev/null < .build.hash || [ "$rhash" != $repo_hash ]; then
-        do_build=1
-    fi
-    if test $do_build; then
         if test -f ../src/Build/Version.h && \
             ! cmp -s ../src/Build/Version.h src/Build/Version.h; then
             rm -rf src/Build/*
@@ -708,27 +745,30 @@ if [ $(uname) = 'Darwin' ]; then
             cp ../src/Build/Version.h src/Build
         fi
         make -j$ncpu
-        echo "$repo_hash" > .build.hash
     fi
 
     [ $build -gt 1 ] || exit
 
-    do_install=
-    if ! read rhash &>/dev/null < .install.hash || [ "$rhash" != $repo_hash ]; then
-        do_install=1
-    fi
-    test -z $do_install || make -j$ncpu install
-    echo "$repo_hash" > .install.hash
+	APP_PATH="$INSTALL_PREFIX/FreeCAD.app"
+	rm -rf $APP_PATH
 
-    APP_PATH="$INSTALL_PREFIX/FreeCAD.app"
-    export FMK_WB_BASE_PATH="$APP_PATH/Contents"
+    make -j$ncpu install
+
+    base_path="$APP_PATH/Contents"
+    export FMK_WB_BASE_PATH="$base_path"
     export FMK_REPO_VER_PATH="$INSTALL_PREFIX/VERSION"
+    date=$(date +%Y%m%d)
+    export FMK_BUILD_DATE=$date
 
     ../../../../installwb.sh
 
+    if test $FMK_BRANDING; then
+        $branding/$FMK_BRANDING/install.sh $branding/$FMK_BRANDING $base_path
+    fi
+
     # name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
     date=$(date +%Y%m%d)
-    name=FreeCAD-$img_name-OSX-Py2-Qt5-$date-x86_64
+    name=FreeCAD-$img_name-OSX-Py3-Qt5-$date-x86_64
     echo $name
     rm -f ../../../out/$name.dmg
     hdiutil create -fs HFS+ -srcfolder "$APP_PATH" ../../../out/$name.dmg
@@ -753,14 +793,17 @@ EOS
 
     rm -rf recipes
     cp -a $conda_recipes recipes
+    if test -f ./recipes/freecad_asm3/meta.yaml; then
+        sed -i -e "s|freecad-asm3|$FMK_FREECAD_PKGNAME|" ./recipes/freecad_asm3/meta.yaml
+    fi
     mkdir -p conda-bld cache
 
-    repo_path=`ls -t conda-bld/freecad*/work/CMakeLists.txt 2> /dev/null | head -1`
+    repo_path=`ls -t conda-bld/${FMK_FREECAD_PKGNAME}_*/work/CMakeLists.txt 2> /dev/null | head -1`
     if test "$repo_path" && test -f $repo_path; then
         repo_path=`dirname $repo_path`
-        version_file=repo/src/Build/Version.h
+        version_file=$repo/src/Build/Version.h
         if test -f $version_file; then
-            build_ver=`ls -t conda-bld/freecad*/work/src/Build/Version.h 2> /dev/null | head -1`
+            build_ver=`ls -t conda-bld/${FMK_FREECAD_PKGNAME}_*/work/src/Build/Version.h 2> /dev/null | head -1`
             if ! cmp -s "$build_ver" $version_file; then
                 git_fetch $repo_path $repo_url $repo_branch
                 cp $version_file $repo_path/src/Build/Version.h
@@ -820,6 +863,7 @@ export FMK_CONDA_FC_EXTRA=/home/conda/wb
 export FMK_BUILD_DATE=$date
 export FMK_BRANDING=$FMK_BRANDING
 export FMK_CONDA_REQUIRMENTS=$FMK_CONDA_REQUIRMENTS
+export FMK_FREECAD_PKGNAME=$FMK_FREECAD_PKGNAME
 rm -rf $appdir 
 mkdir -p $appdir/usr
 cp -a recipes/AppDir/* $appdir/
@@ -844,9 +888,9 @@ if [ $build -ne 3 ]; then
     pkg_hash=$hash
 
     # copy packaging directory to freecad repo
-    cp -a packaging/debian repo/
+    cp -a packaging/debian $repo/
 
-    pushd repo
+    pushd $repo
     ncpu=$(grep -c ^processor /proc/cpuinfo)
     DEB_BUILD_OPTIONS="parallel=$ncpu" debuild -b -us -uc
     popd
