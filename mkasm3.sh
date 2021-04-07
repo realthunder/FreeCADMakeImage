@@ -7,7 +7,8 @@ test "$FMK_REPO_BRANCH" || export FMK_REPO_BRANCH=LinkStage3
 
 # additional workbench to install
 if test -z "$FMK_WB_LIST"; then
-    export FMK_WB_LIST="asm3 py3_slvs"
+    # export FMK_WB_LIST="asm3 py3_slvs"
+    export FMK_WB_LIST="asm3"
     test "$FMK_WB_PATH_asm3" || export FMK_WB_PATH_asm3=Mod
     test "$FMK_WB_URL_asm3" || export FMK_WB_URL_asm3=https://github.com/realthunder/FreeCAD_assembly3
     # submodules needed to be checked out
