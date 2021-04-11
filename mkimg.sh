@@ -690,8 +690,8 @@ if [ $(uname) = 'Darwin' ]; then
             # ver=$(conda run -p $base_path python get_freecad_version.py)
 
             out=../../../out/$app_path
-            rm -f $out
-            hdiutil create -fs HFS+ -srcfolder $app_path $out
+            rm -f $out.dmg
+            hdiutil create -fs HFS+ -srcfolder $app_path $out.dmg
         fi
         exit
     fi
