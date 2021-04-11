@@ -37,14 +37,14 @@ requirements:
     - xerces-c
     - zlib
     - vtk 8.2
+    - smesh 8.3.0.3
+    - netgen 6.2.1808
     - swig
     - eigen
     - pybind11
     - coin3d
     - pivy
     - pyside2
-    - smesh
-    - netgen
     - doxygen
     - hdf5
     - xorg-libxi  # [linux]
@@ -54,7 +54,6 @@ requirements:
     - blas * openblas
     - freetype
     - libspnav # [linux]
-    - libclang 9.0.1 # [osx]
   run:
     - {{ pin_compatible("pyside2") }}
     - vtk 8.2
@@ -67,8 +66,8 @@ requirements:
     - python
     - coin3d
     - pivy
-    - smesh
-    - netgen
+    - smesh 8.3.0.3
+    - netgen 6.2.1808
     - xorg-libxi  # [linux]
     - xorg-libxmu  # [linux]
     - xorg-libxt  # [linux]
@@ -81,7 +80,6 @@ requirements:
     - opencamlib
     # - solvespace
     - libspnav # [linux]
-    - libclang 9.0.1 # [osx]
 
 test:
   commands:
