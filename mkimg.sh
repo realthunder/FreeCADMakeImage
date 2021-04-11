@@ -583,7 +583,7 @@ if test $win; then
     set -x
     popd
 
-    extra_dirs="plugins resources qml"
+    extra_dirs="plugins resources qml translations"
     for p in $extra_dirs; do
         if test -d $libpack/$p; then
             cp -a $libpack/$p $tmpdir
