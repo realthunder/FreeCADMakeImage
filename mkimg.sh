@@ -401,9 +401,9 @@ mkdir -p build/$build_dir
 cd build/$build_dir
 
 # check for windows building
-if uname -a | grep -q CYGWIN; then
+if uname -a | grep -iq cygwin; then
     win=cygwin
-elif uname -a | grep -q Microsoft; then
+elif uname -a | grep -iq microsoft; then
     win=wsl
 fi
 
