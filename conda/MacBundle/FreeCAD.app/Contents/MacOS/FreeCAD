@@ -13,8 +13,12 @@ export GIT_SSL_CAINFO=${PREFIX}/ssl/cacert.pem
 if [[ `sw_vers -productVersion` > 10.99 ]] ; then
     export QT_MAC_WANTS_LAYER=1
 fi
-if test -f "$PREFIX/bin/FreeCADLink"; then
-    "$PREFIX/bin/FreeCADLink" $@
+if [ ! -z "$1" ] && [ -e "$PREFIX/bin/$1" ] ; then
+    name=$1
+    shift
+elif test -f "$PREFIX/bin/FreeCADLink"; then
+    name=FreeCADLink
 else
-    "$PREFIX/bin/FreeCAD" $@
+    name=FreeCAD
 fi
+"$PREFIX/bin/$name" "$@"
