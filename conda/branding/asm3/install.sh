@@ -8,6 +8,10 @@ if test -f $dst/../MacOS/FreeCAD; then
     cp -a $src/MacBundle/* $dst/../
     sed -i '' "s@_FC_BUNDLE_VERSION_@${FMK_BUILD_DATE:0:4}@g" $dst/../Info.plist
     mv $dst/../MacOS/FreeCAD $dst/../MacOS/FreeCADLink
+elif test -f $dst/MacOS/FreeCAD; then
+    cp -a $src/MacBundle/* $dst/
+    sed -i '' "s@_FC_BUNDLE_VERSION_@${FMK_BUILD_DATE:0:4}@g" $dst/Info.plist
+    mv $dst/MacOS/FreeCAD $dst/MacOS/FreeCADLink
 elif test -f $dst/bin/FreeCAD; then
     rm -f $dst/../freecad_conda.desktop $dst/../freecad_conda.png
     cp $src/AppDir/freecad_link.desktop $src/AppDir/freecad_link.png $dst/../

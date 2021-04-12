@@ -762,7 +762,7 @@ if [ $(uname) = 'Darwin' ]; then
 
     make -j$ncpu install
 
-    base_path="$APP_PATH/Contents/Resources"
+    base_path="$APP_PATH/Contents"
     export FMK_WB_BASE_PATH="$base_path"
     export FMK_REPO_VER_PATH="$INSTALL_PREFIX/VERSION"
     date=$(date +%Y%m%d)

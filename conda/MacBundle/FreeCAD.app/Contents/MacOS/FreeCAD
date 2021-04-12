@@ -3,6 +3,7 @@ HERE=$(dirname "$(dirname "$0")")
 export PREFIX=$HERE/Resources
 export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 export PYTHONHOME=$PREFIX
+export PYTHONPATH=`echo $PREFIX/lib/python3*`
 # export QT_QPA_PLATFORM_PLUGIN_PATH=${PREFIX}/plugins
 # export QT_XKB_CONFIG_ROOT=${PREFIX}/lib
 export FONTCONFIG_FILE=/etc/fonts/fonts.conf
@@ -14,6 +15,7 @@ if [[ `sw_vers -productVersion` > 10.99 ]] ; then
     export QT_MAC_WANTS_LAYER=1
 fi
 if [ ! -z "$1" ] && [ -e "$PREFIX/bin/$1" ] ; then
+    export PATH="$PREFIX/bin":$PATH
     name=$1
     shift
 elif test -f "$PREFIX/bin/FreeCADLink"; then
