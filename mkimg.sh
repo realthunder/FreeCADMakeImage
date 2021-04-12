@@ -233,7 +233,7 @@ prepare_remote() {
     set +x
     if test -z "$FMK_CONDA_IMG_NAME"; then
         date=$(date +%Y%m%d)
-        export FMK_CONDA_IMG_NAME=FreeCAD-$img_name$daily-Conda-Py3-Qt5-$date.glibc2.12-x86_64
+        export FMK_CONDA_IMG_NAME=FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date.glibc2.12-x86_64
     fi
     env | while read -r line; do
         if [ "${line:0:4}" = FMK_ ]; then
@@ -551,7 +551,7 @@ if test $win; then
 
     tmpdir=$PWD/../../tmp
     mkdir -p $tmpdir
-    rm -rf $tmpdir/* ../../FreeCAD-$img_name*
+    rm -rf $tmpdir/* ../../FreeCAD-$img_name$daily$FMK_IMG_POSTFIX*
 
     # copy `bin` folder from libpack
 
@@ -620,7 +620,7 @@ EOS
     cp ../../../misc/FreeCADInit.ipynb bin/
 
     cd ..
-    name=FreeCAD-$img_name$daily-Win64-$build_name-$date
+    name=FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-Win64-$build_name-$date
 
     # archive the result
     mv tmp $name
@@ -678,7 +678,7 @@ if [ $(uname) = 'Darwin' ]; then
         fi
         if [ $build -gt 0 ]; then
             date=$(date +%Y%m%d)
-            app_path=FreeCAD-$img_name$daily-OSX-Conda-Py3-Qt5-$date-x86_64
+            app_path=FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-OSX-Conda-Py3-Qt5-$date-x86_64
             cd recipes
             cp -a MacBundle $app_path
             base_path=$app_path/FreeCAD.app/Contents/Resources
@@ -773,7 +773,7 @@ if [ $(uname) = 'Darwin' ]; then
 
     # name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
     date=$(date +%Y%m%d)
-    name=FreeCAD-$img_name-OSX-Py3-Qt5-$date-x86_64
+    name=FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-OSX-Py3-Qt5-$date-x86_64
     echo $name
     rm -f ../../../out/$name.dmg
     hdiutil create -fs HFS+ -srcfolder "$APP_PATH" ../../../out/$name.dmg
@@ -785,7 +785,7 @@ fi
 if test $conda; then
     docker_name=$conda
     date=$(date +%Y%m%d)
-    conda_img_name="FreeCAD-$img_name$daily-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
+    conda_img_name="FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
 
 cat << EOS > tmp.dockfile 
 FROM condaforge/linux-anvil-comp7
@@ -918,8 +918,8 @@ if [ $build -gt 1 ]; then
     else
         build_name=Xenial-Py2-Qt4
     fi
-    name=$(echo out/FreeCAD-$img_name*.AppImage)
+    name=$(echo out/FreeCAD-$img_name$daily$FMK_IMG_POSTFIX*.AppImage)
     ext=${name#*glibc}
-    mv $name ../../out/FreeCAD-$img_name-$build_name-$date.glibc$ext
+    mv $name ../../out/FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-$build_name-$date.glibc$ext
 fi
 
