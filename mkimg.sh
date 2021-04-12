@@ -98,6 +98,7 @@ vc17=
 gitfetch=
 daily=
 forcedaily=
+img_postfix='-Stable'
 sudopass="$FMK_SUDOPASS"
 
 while test $1; do
@@ -172,10 +173,12 @@ while test $1; do
             export FMK_NO_ARCHIVE=1
             ;;
         daily)
-            daily="-Daily"
+            daily=1
+            img_postfix='-Daily'
             ;;
         forcedaily)
-            daily="-Daily"
+            daily=1
+            img_postfix="-Daily"
             forcedaily=1
             ;;
         branch=*)
@@ -233,7 +236,7 @@ prepare_remote() {
     set +x
     if test -z "$FMK_CONDA_IMG_NAME"; then
         date=$(date +%Y%m%d)
-        export FMK_CONDA_IMG_NAME=FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date.glibc2.12-x86_64
+        export FMK_CONDA_IMG_NAME=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date.glibc2.12-x86_64
     fi
     env | while read -r line; do
         if [ "${line:0:4}" = FMK_ ]; then
@@ -410,10 +413,10 @@ elif uname -a | grep -iq microsoft; then
     win=wsl
 fi
 
-if test $win; then 
-    repo=repo$daily
-else
+if test $conda; then
     repo=repo
+else
+    repo=repo$img_postfix
 fi
 
 # prepare freecad repo
@@ -469,14 +472,14 @@ if test $win; then
             url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19_pre/FreeCADLibs_12.1.2_x64_VC15.7z}
             vs=15
             vs_name="Visual Studio 15 2017 Win64"
-            build_name="Py3-Qt5.12"
+            build_name="Py3-Qt5"
         else
             # url=${FMK_LIBPACK_URL:=https://github.com/apeltauer/FreeCAD/releases/download/LibPack_12.4.2/FreeCADLibs_12.4.2_x64_VC17.7z}
             url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19.1/FreeCADLibs_12.5.3_x64_VC17.7z}
             vs=17
             vs_name="Visual Studio 16 2019"
             vs_arch="-A x64"
-            build_name="Py3-Qt5.15"
+            build_name="Py3-Qt5"
         fi
 
         if ! test -d libpack$vs; then
@@ -551,7 +554,7 @@ if test $win; then
 
     tmpdir=$PWD/../../tmp
     mkdir -p $tmpdir
-    rm -rf $tmpdir/* ../../FreeCAD-$img_name$daily$FMK_IMG_POSTFIX*
+    rm -rf $tmpdir/* ../../FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX*
 
     # copy `bin` folder from libpack
 
@@ -620,7 +623,7 @@ EOS
     cp ../../../misc/FreeCADInit.ipynb bin/
 
     cd ..
-    name=FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-Win64-$build_name-$date
+    name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win64-$build_name-$date
 
     # archive the result
     mv tmp $name
@@ -678,7 +681,7 @@ if [ $(uname) = 'Darwin' ]; then
         fi
         if [ $build -gt 0 ]; then
             date=$(date +%Y%m%d)
-            app_path=FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-OSX-Conda-Py3-Qt5-$date-x86_64
+            app_path=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Conda-Py3-Qt5-$date-x86_64
             cd recipes
             cp -a MacBundle $app_path
             base_path=$app_path/FreeCAD.app/Contents/Resources
@@ -773,7 +776,7 @@ if [ $(uname) = 'Darwin' ]; then
 
     # name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
     date=$(date +%Y%m%d)
-    name=FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-OSX-Py3-Qt5-$date-x86_64
+    name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Py3-Qt5-$date-x86_64
     echo $name
     rm -f ../../../out/$name.dmg
     hdiutil create -fs HFS+ -srcfolder "$APP_PATH" ../../../out/$name.dmg
@@ -785,7 +788,7 @@ fi
 if test $conda; then
     docker_name=$conda
     date=$(date +%Y%m%d)
-    conda_img_name="FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
+    conda_img_name="FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
 
 cat << EOS > tmp.dockfile 
 FROM condaforge/linux-anvil-comp7
@@ -918,8 +921,8 @@ if [ $build -gt 1 ]; then
     else
         build_name=Xenial-Py2-Qt4
     fi
-    name=$(echo out/FreeCAD-$img_name$daily$FMK_IMG_POSTFIX*.AppImage)
+    name=$(echo out/FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX*.AppImage)
     ext=${name#*glibc}
-    mv $name ../../out/FreeCAD-$img_name$daily$FMK_IMG_POSTFIX-$build_name-$date.glibc$ext
+    mv $name ../../out/FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-$build_name-$date.glibc$ext
 fi
 
