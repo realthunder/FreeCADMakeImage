@@ -475,7 +475,7 @@ if test $win; then
             build_name="Py3-Qt5"
         else
             # url=${FMK_LIBPACK_URL:=https://github.com/apeltauer/FreeCAD/releases/download/LibPack_12.4.2/FreeCADLibs_12.4.2_x64_VC17.7z}
-            url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19.1/FreeCADLibs_12.5.3_x64_VC17.7z}
+            url=${FMK_LIBPACK_URL:=https://github.com/realthunder/FreeCAD_Assembly3/releases/download/0.11/FreeCADLibs_asm3_12.5.4_x64_VC17.7z}
             vs=17
             vs_name="Visual Studio 16 2019"
             vs_arch="-A x64"
