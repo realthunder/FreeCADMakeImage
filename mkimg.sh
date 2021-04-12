@@ -168,6 +168,9 @@ while test $1; do
         package)
             build=3
             ;;
+        noarchive)
+            export FMK_NO_ARCHIVE=1
+            ;;
         daily)
             daily="-Daily"
             ;;
@@ -621,7 +624,9 @@ EOS
 
     # archive the result
     mv tmp $name
-    7z a ../out/$name.7z $name
+    if test -z $FMK_NO_ARCHIVE; then
+        7z a ../out/$name.7z $name
+    fi
 
     exit
 fi
