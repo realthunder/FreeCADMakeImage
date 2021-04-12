@@ -734,10 +734,10 @@ if [ $(uname) = 'Darwin' ]; then
 
     [ $build -gt 0 ] || exit
 
-    if [ $build = 1 ]; then
-        ncpu=$(sysctl hw.ncpu | awk '{print $2}')
-        [ "$ncpu" != "1" ] || ncpu=2
+    ncpu=$(sysctl hw.ncpu | awk '{print $2}')
+    test $ncpu || ncpu=2
 
+    if [ $build = 1 ]; then
         if test -f ../src/Build/Version.h && \
             ! cmp -s ../src/Build/Version.h src/Build/Version.h; then
             rm -rf src/Build/*
