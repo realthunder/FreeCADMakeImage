@@ -188,8 +188,8 @@ fi
 
 zsync='-u gh-releases-zsync|realthunder|FreeCAD_assembly3|latest'
 case $image_name in
-FreeCAD-asm3-Conda-Py3-Qt5-*-x86_64)
-    zsync="$zsync|FreeCAD-asm3-Conda-Py3-Qt5-*-x86_64.AppImage.zsync"
+FreeCAD-asm3-Stable-Conda-Py3-Qt5-*-x86_64)
+    zsync="$zsync|FreeCAD-asm3-Stable-Conda-Py3-Qt5-*-x86_64.AppImage.zsync"
     ;;
 FreeCAD-asm3-Daily-Conda-Py3-Qt5-*-x86_64)
     zsync="$zsync|FreeCAD-asm3-Daily-Conda-Py3-Qt5-*-x86_64.AppImage.zsync"
