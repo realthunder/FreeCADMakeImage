@@ -413,10 +413,10 @@ elif uname -a | grep -iq microsoft; then
     win=wsl
 fi
 
-if test $conda; then
-    repo=repo
+if test $daily && test -z $conda; then
+    repo=repo-Daily
 else
-    repo=repo$img_postfix
+    repo=repo
 fi
 
 # prepare freecad repo
