@@ -523,6 +523,9 @@ if test $win; then
         "$cmake" \
             -G "$vs_name" $vs_arch \
             -DFREECAD_LIBPACK_DIR=$libpackpath \
+            -DFREECAD_USE_PYBIND11:BOOL=ON \
+            -DBUILD_FLAT_MESH:BOOL=ON \
+            -DBUILD_FEM_NETGEN:BOOL=ON \
             -DOCC_INCLUDE_DIR=$libpackpath/include/opencascade \
             -DPYTHON_EXECUTABLE=$libpackpath/bin/python.exe \
             ..
