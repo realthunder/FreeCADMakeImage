@@ -6,7 +6,7 @@ appdir=$1
 appimage=$2
 image_name=${FMK_CONDA_IMG_NAME:="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"}
 
-if test $FMK_CONDA_REQUIRMENTS; then
+if test "$FMK_CONDA_REQUIRMENTS" && test -f "$FMK_CONDA_REQUIRMENTS"; then
     conda create \
         -p $appdir \
         --file $FMK_CONDA_REQUIRMENTS \
@@ -21,20 +21,21 @@ else
     fi
     conda create \
         -p "$appdir" \
-        calculix blas=*=openblas git gitpython \
+        python=3.9 calculix blas=*=openblas git gitpython \
         opencamlib matplotlib-base numpy sympy pandas $appimage_updater \
-        gmsh netgen=6.2.1808 scipy=1.4.1 pythonocc-core six \
-        pyyaml ifcopenshell boost-cpp=1.72 libredwg pycollada \
+        gmsh netgen scipy pythonocc-core six \
+        pyyaml ifcopenshell boost-cpp libredwg pycollada \
         lxml xlutils olefile requests openglider \
-        blinker opencv qt.py nine docutils jupyter notebook \
+        blinker opencv qt.py nine docutils jupyter notebook solvespace \
         --copy \
         --no-default-packages \
+        -c freecad/label/dev \
         -c freecad \
         -c conda-forge \
         -y
 fi
 
-local_pkgs="coin3d $FMK_FREECAD_PKGNAME solvespace"
+local_pkgs="coin3d $FMK_FREECAD_PKGNAME"
 if test $appimage; then
     local_pkgs="$local_pkgs fcitx-qt5"
 fi

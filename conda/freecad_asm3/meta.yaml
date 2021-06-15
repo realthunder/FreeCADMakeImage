@@ -30,15 +30,15 @@ requirements:
     - ninja
     - git
   host:
+    - python 3.9
     - boost-cpp
-    - python
     - qt
     - occt
     - xerces-c
     - zlib
-    - vtk 8.2
-    - smesh 8.3.0.3
-    - netgen 6.2.1808
+    - vtk
+    - smesh
+    - netgen
     - swig
     - eigen
     - pybind11
@@ -56,18 +56,18 @@ requirements:
     - libspnav # [linux]
   run:
     - {{ pin_compatible("pyside2") }}
-    - vtk 8.2
+    - python 3.9
+    - vtk
     - occt
     - qt
     - xerces-c
     - zlib
     - boost-cpp
     - hdf5
-    - python
     - coin3d
     - pivy
-    - smesh 8.3.0.3
-    - netgen 6.2.1808
+    - smesh
+    - netgen
     - xorg-libxi  # [linux]
     - xorg-libxmu  # [linux]
     - xorg-libxt  # [linux]
