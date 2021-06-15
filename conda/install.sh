@@ -176,7 +176,7 @@ if ! test -e $apptool/AppRun; then
         echo "There is an existing AppImage extracted directory 'squashfs-root'"
         exit 1
     fi
-    curl -OL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+    curl -OL https://github.com/AppImage/AppImageKit/releases/download/12/appimagetool-x86_64.AppImage
     chmod +x appimagetool-x86_64.AppImage
     ./appimagetool-x86_64.AppImage --appimage-extract
     mv squashfs-root $apptool
