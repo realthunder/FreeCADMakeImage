@@ -126,6 +126,9 @@ while test $1; do
         fetch)
             gitfetch=1
             ;;
+        nofetch)
+            gitfetch=0
+            ;;
         conda)
             conda=${arg#*=}
             if [ $conda = conda ]; then
@@ -379,14 +382,16 @@ git_fetch() {
         pushd $dir
     else
         pushd $dir
-        hash=$(git show -s --format=%H)
-        remote_hash=$(git ls-remote $url $branch | awk '{ print $1 }')
-        if [ "$hash" != "$remote_hash" ]; then
-            git fetch --depth=1 origin $branch
-            git checkout -qf FETCH_HEAD
-        elif test -z $forcedaily && test $daily; then
-            echo No new commits for daily build
-            exit
+        if [ "$gitfetch" != 0 ]; then
+            hash=$(git show -s --format=%H)
+            remote_hash=$(git ls-remote $url $branch | awk '{ print $1 }')
+            if [ "$hash" != "$remote_hash" ]; then
+                git fetch --depth=1 origin $branch
+                git checkout -qf FETCH_HEAD
+            elif test -z $forcedaily && test $daily; then
+                echo No new commits for daily build
+                exit
+            fi
         fi
     fi
     hash=$(git show -s --format=%H)
