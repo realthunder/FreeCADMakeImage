@@ -1,0 +1,29 @@
+From 41dd4382f6068dd824dd2f515b087bebeeeb066c Mon Sep 17 00:00:00 2001
+From: "Zheng, Lei" <realthunder.dev@gmail.com>
+Date: Wed, 15 Sep 2021 15:33:01 +0800
+Subject: [PATCH] Fix crash on SoCallbackAction destructor
+
+Fixes realthunder/FreeCAD_Assembly3#762
+Fixes realthunder/FreeCAD_Assembly3#804
+---
+ src/actions/SoCallbackAction.cpp | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/actions/SoCallbackAction.cpp b/src/actions/SoCallbackAction.cpp
+index 41ff780e4..c6785a1b0 100644
+--- a/src/actions/SoCallbackAction.cpp
++++ b/src/actions/SoCallbackAction.cpp
+@@ -462,7 +462,9 @@ static void
+ delete_list_elements(SbList<SoCallbackData *> & cl)
+ {
+   int n = cl.getLength();
+-  for (int i = 0; i < n; i++) cl[i]->deleteAll();
++  for (int i = 0; i < n; i++) {
++    if (cl[i]) cl[i]->deleteAll();
++  }
+ }
+ 
+ /*!
+-- 
+2.25.1
+
