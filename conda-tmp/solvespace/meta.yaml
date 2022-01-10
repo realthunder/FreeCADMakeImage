@@ -1,6 +1,6 @@
 {% set name = "solvespace" %}
-{% set version = "2.4.1" %}
-{% set sha256 = "f07464b752e9005dd31c990bcccec46d07411a94da767bd61cbd600a190088e6" %}
+{% set version = "2.4.2" %}
+{% set sha256 = "0aee9bbb0fad109800e4d8f899fdd23c3d8c46019bb5ac57959023ae61f3fcc2" %}
 
 package:
     name: {{ name }}
@@ -21,10 +21,11 @@ requirements:
         - ninja
         - cmake
         - swig
+        - ninja
     host:
-        - python
+        - python 3.9
     run:
-        - python
+        - python 3.9
 
 # test: # disable test for now, as on macos it crashes somehow
 #     imports:
