@@ -1,5 +1,5 @@
 {% set name = "freecad-asm3" %}
-{% set version = "0.19" %}
+{% set version = "0.20" %}
 
 
 package:
@@ -51,9 +51,11 @@ requirements:
     - xorg-libxmu  # [linux]
     - xorg-libxt  # [linux]
     - tbb-devel
-    - blas * openblas
     - freetype
     - libspnav # [linux]
+    - pcl
+    - six
+    - ply
   run:
     - {{ pin_compatible("pyside2") }}
     - python 3.9
@@ -80,6 +82,7 @@ requirements:
     - opencamlib
     # - solvespace
     - libspnav # [linux]
+    - pcl
 
 test:
   commands:

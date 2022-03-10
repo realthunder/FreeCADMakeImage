@@ -6,9 +6,10 @@ declare -a CMAKE_PLATFORM_FLAGS
 # temporary workaround for vtk-cmake setup
 # should be applied @vtk-feedstock
 if [[ ${HOST} =~ .*linux.* ]]; then
-    if test -f ${PREFIX}/lib/cmake/vtk-*/Modules/vtkhdf5.cmake; then
-        LIBPTHREAD=$(find ${PREFIX} -name "libpthread.so") sed -i 's#/home/conda/feedstock_root/build_artifacts/vtk_.*_build_env/x86_64-conda_cos6-linux-gnu/sysroot/usr/lib.*;##g' ${PREFIX}/lib/cmake/vtk-*/Modules/vtkhdf5.cmake 
-    fi
+    # if test -f ${PREFIX}/lib/cmake/vtk-*/Modules/vtkhdf5.cmake; then
+    #     LIBPTHREAD=$(find ${PREFIX} -name "libpthread.so") sed -i 's#/home/conda/feedstock_root/build_artifacts/vtk_.*_build_env/x86_64-conda_cos6-linux-gnu/sysroot/usr/lib.*;##g' ${PREFIX}/lib/cmake/vtk-*/Modules/vtkhdf5.cmake
+    # fi
+
     # temporary workaround for qt-cmake:
     sed -i 's|_qt5gui_find_extra_libs(EGL.*)|_qt5gui_find_extra_libs(EGL "EGL" "" "")|g' $PREFIX/lib/cmake/Qt5Gui/Qt5GuiConfigExtras.cmake
     sed -i 's|_qt5gui_find_extra_libs(OPENGL.*)|_qt5gui_find_extra_libs(OPENGL "GL" "" "")|g' $PREFIX/lib/cmake/Qt5Gui/Qt5GuiConfigExtras.cmake
@@ -31,7 +32,7 @@ cmake -G "$cmake_generator" \
       -D OCC_INCLUDE_DIR:FILEPATH=$PREFIX/include \
       -D USE_BOOST_PYTHON:BOOL=OFF \
       -D FREECAD_USE_PYBIND11:BOOL=ON \
-      -D BUILD_ENABLE_CXX11:BOOL=ON \
+      -D BUILD_ENABLE_CXX_STD:STRING=C++17 \
       -D SMESH_INCLUDE_DIR:FILEPATH=$PREFIX/include/smesh \
       -D FREECAD_USE_EXTERNAL_SMESH=ON \
       -D BUILD_FLAT_MESH:BOOL=ON \
@@ -49,9 +50,9 @@ cmake -G "$cmake_generator" \
       ${CMAKE_PLATFORM_FLAGS[@]} \
       ../..
 
-if [[ ${HOST} =~ .*linux.* ]]; then
+if [ "${cmake_generator}" = 'Ninja' ]; then
     ninja install
 else
-    cmake --build . --target install --parallel 3
+    cmake --build . --target install --parallel 4
 fi
 rm -r ${PREFIX}/doc     # smaller size of package!
