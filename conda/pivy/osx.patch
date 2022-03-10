@@ -1,0 +1,13 @@
+diff --git a/interfaces/CMakeLists.txt b/interfaces/CMakeLists.txt
+index 60c62a9..e23de15 100644
+--- a/interfaces/CMakeLists.txt
++++ b/interfaces/CMakeLists.txt
+@@ -10,6 +10,8 @@ function(set_swig_properties NAME)
+ endfunction()
+ 
+ 
++set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,dynamic_lookup")
++
+ set_swig_properties(coin.i)
+ 
+ # remember: the order of the includes is important!

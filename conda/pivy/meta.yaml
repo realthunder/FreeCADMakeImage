@@ -1,0 +1,52 @@
+{% set name = "pivy" %}
+{% set version = "0.6.6" %}
+{% set sha256 = "27204574d894cc12aba5df5251770f731f326a3e7de4499e06b5f5809cc5659e" %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  fn: {{ name }}.tar.gz
+  url: https://github.com/FreeCAD/pivy/archive/{{ version }}.tar.gz
+  sha256: {{ sha256 }}
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - {{ compiler("cxx") }}
+    - {{ cdt('mesa-libgl-devel') }}      # [linux]
+    - msinttypes      # [win]
+    - cmake
+    - ninja
+    - swig
+  host:
+    - python
+    - coin3d
+    - soqt
+    - qt
+  run:
+    - python
+    - coin3d
+    - qt
+    - pyside2
+    - soqt
+
+test:
+  imports:
+    - pivy.coin
+    # - pivy.gui.soqt
+
+about:
+  home: https://github.com/FreeCAD/pivy
+  license: ISC
+  license_file: LICENSE
+  summary: python bindings to coin3d.
+  doc_url: https://github.com/FreeCAD/pivy
+  dev_url: https://github.com/FreeCAD/pivy
+
+extra:
+  recipe-maintainers:
+    - looooo
