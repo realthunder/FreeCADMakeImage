@@ -28,7 +28,7 @@ if test -z "$FMK_WB_LIST"; then
     for arg in "$@"; do
         case $arg in
         mac)
-            export FMK_WB_SUB_asm3=py_slvs_mac
+            # export FMK_WB_SUB_asm3=py_slvs_mac
             mac=1
             continue
             ;;

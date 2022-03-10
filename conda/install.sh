@@ -3,14 +3,26 @@
 set -ex
 
 appdir=$1
-appimage=$2
+win=
+if [ "$2" = "Windows" ]; then
+    app_path=`wslpath -wa $appdir`
+    conda_path=`wslpath -wa $3`
+    conda_cmd="cmd.exe /c call $conda_path\\condabin\\conda"
+    win=1
+else
+    conda_cmd=conda
+    app_path=$appdir
+    appimage=$2
+fi
+
 image_name=${FMK_CONDA_IMG_NAME:="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"}
 
 if test "$FMK_CONDA_REQUIRMENTS" && test -f "$FMK_CONDA_REQUIRMENTS"; then
-    conda create \
-        -p $appdir \
+    $conda_cmd create \
+        -p $app_path \
         --file $FMK_CONDA_REQUIRMENTS \
         --no-default-packages \
+        -c freecad/label/dev \
         -c freecad \
         -c conda-forge \
         -y
@@ -19,14 +31,14 @@ else
     if test $appimage; then
         appimage_updater=appimage-updater-bridge
     fi
-    conda create \
-        -p "$appdir" \
+    $conda_cmd create \
+        -p $app_path \
         python=3.9 calculix blas=*=openblas git gitpython \
         opencamlib matplotlib-base numpy sympy pandas $appimage_updater \
         gmsh netgen scipy pythonocc-core six \
         pyyaml ifcopenshell boost-cpp libredwg pycollada \
         lxml xlutils olefile requests openglider \
-        blinker opencv qt.py nine docutils jupyter notebook solvespace \
+        blinker opencv qt.py nine docutils jupyter notebook \
         --copy \
         --no-default-packages \
         -c freecad/label/dev \
@@ -39,18 +51,19 @@ local_pkgs="coin3d $FMK_FREECAD_PKGNAME"
 if test $appimage; then
     local_pkgs="$local_pkgs fcitx-qt5"
 fi
-conda install -p $appdir --use-local $local_pkgs -y
+
+$conda_cmd install -p $app_path --use-local $local_pkgs -y
 
 if test "$FMK_CONDA_FC_EXTRA"; then
     cp -a "$FMK_CONDA_FC_EXTRA"/* $appdir
 fi
 
 # installing some additional libraries with pip
-conda run -p $appdir pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
+# conda run -p $appdir pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
 
 jupyter_dir=$appdir/share/jupyter/kernels
 if test -d $jupyter_dir; then
-    conda run -p $appdir pip install git+https://github.com/realthunder/freecad_jupyter
+    $conda_cmd run -p $app_path pip install git+https://github.com/realthunder/freecad_jupyter
     rm -rf $jupyter_dir/*
     mkdir -p $jupyter_dir/freecad
     cat > $jupyter_dir/freecad/kernel.json <<EOS
@@ -75,11 +88,40 @@ fi
 # conda run -p $appdir python -m compileall $appdir/usr/lib/python$py_ver $appdir/usr/Mod
 
 # uninstall some packages not needed
-conda uninstall -p $appdir gtk2 gdk-pixbuf llvm-tools \
+$conda_cmd uninstall -p $app_path gtk2 gdk-pixbuf llvm-tools \
                            llvmdev clangdev clang clang-tools \
                            clangxx libclang libllvm10 --force -y
 
-conda list -e -p $appdir > $appdir/packages.txt
+$conda_cmd list -e -p $app_path > $appdir/packages.txt
+
+if test $win; then
+    cd $appdir
+    # Why do we get permission denied error if move mingw64?
+    # mv Library/mingw64 .
+    cp -a Library/mingw64 .
+    mv Library/plugins .
+    mkdir bin
+    mv share Scripts Lib DLLs bin/
+    mv packages.txt python* msvc* ucrt* bin/
+    rm -f Library/bin/api*.dll
+    mv Library/bin/*.dll bin/
+    mv Library/bin/FreeCAD* bin/
+    for dir in Mod Ext data lib resources translations; do
+        mv Library/$dir .
+    done
+    for file in QtWebEngineProcess assistant ccx gmsh; do
+        mv Library/bin/$file.exe bin/
+    done
+    # cp ../ssl-patch.py bin/Lib/ssl.py
+    rm -rf tmp Tools Menu Library conda-meta etc include fonts libs sip
+    find . -maxdepth 1 -type f -delete
+    find . -type f \( -name "*.pdb" -o -name "*.lib" -o -name __pycache__ \) -delete
+    cat > bin/qt.conf << EOS
+[Paths]
+Prefix = ./../
+EOS
+    exit
+fi
 
 pushd "$appdir"
 
@@ -177,7 +219,7 @@ if ! test -e $apptool/AppRun; then
         echo "There is an existing AppImage extracted directory 'squashfs-root'"
         exit 1
     fi
-    curl -OL https://github.com/AppImage/AppImageKit/releases/download/12/appimagetool-x86_64.AppImage
+    curl -OL https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage
     chmod +x appimagetool-x86_64.AppImage
     ./appimagetool-x86_64.AppImage --appimage-extract
     mv squashfs-root $apptool

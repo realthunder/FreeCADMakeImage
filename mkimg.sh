@@ -82,7 +82,7 @@ mkdir -p build/out
 
 docker=
 docker_exe=docker
-docker_run="$docker_exe run"
+docker_run="$docker_exe run -t "
 dockerfile=
 dist=bionic
 dist_ver=
@@ -94,7 +94,7 @@ run=
 sudo=
 rebuild=
 py3=
-vc17=
+libpack_old=
 gitfetch=
 daily=
 forcedaily=
@@ -112,8 +112,8 @@ while test $1; do
         py3)
             py3=1
             ;;
-        vc17)
-            vc17=1
+        libpack-old)
+            libpack_old=1
             ;;
         sudo)
             sudo=sudo
@@ -406,6 +406,17 @@ else
     if test $rebuild; then
         rm -rf build/$build_dir
     fi
+
+    if test $win; then
+        if ! test -d PortableGit; then
+            wget -c https://github.com/git-for-windows/git/releases/download/v2.35.1.windows.2/PortableGit-2.35.1.2-64-bit.7z.exe -O build/PortableGit.7z.exe
+            mkdir build/PortableGit
+            pushd build/PortableGit
+            7z x ../PortableGit.7z.exe
+            popd
+        fi
+        portable_git=$PWD/PortableGit
+    fi
 fi
 
 mkdir -p build/$build_dir
@@ -418,7 +429,7 @@ elif uname -a | grep -iq microsoft; then
     win=wsl
 fi
 
-if test $daily && test -z $conda; then
+if [[ $daily != "" && ( $win != "" || $conda == "" ) ]]; then
     repo=repo-Daily
 else
     repo=repo
@@ -447,6 +458,82 @@ export FMK_REPO_HASH=${hash:0:8}
 # check for windows building
 if test $win; then 
 
+    if test $conda; then
+        rm -rf ./recipes
+        cp -a $conda_recipes ./recipes
+
+        conda_host=Windows
+        conda_path=env
+        . ./recipes/setup.sh
+
+        if test -f ./recipes/freecad_asm3/meta.yaml; then
+            sed -i -e "s|freecad-asm3|$FMK_FREECAD_PKGNAME|" ./recipes/freecad_asm3/meta.yaml
+            sed -i -e "s|path: ../../repo|path: $(win_path2 $repo)|" ./recipes/freecad_asm3/meta.yaml
+        fi
+
+        repo_path=`ls -t env/conda-bld/${FMK_FREECAD_PKGNAME}_*/work/CMakeLists.txt 2> /dev/null | head -1`
+        if test "$repo_path" && test -f "$repo_path"; then
+            repo_path=`dirname $repo_path`
+            version_file=$repo/src/Build/Version.h
+            if test -f $version_file; then
+                build_ver=`ls -t env/conda-bld/${FMK_FREECAD_PKGNAME}_*/work/src/Build/Version.h 2> /dev/null | head -1`
+                if ! cmp -s "$build_ver" $version_file; then
+                    git_fetch $repo_path $repo_url $repo_branch
+                    cp $version_file $repo_path/src/Build/Version.h
+                fi
+            elif test $gitfetch; then
+                git_fetch $repo_path $repo_url $repo_branch
+            fi
+        fi
+
+        conda_cmd="conda build"
+        if test -z $rebuild; then
+            conda_cmd+=" --dirty "
+        fi
+
+        if [ $build -ne 3 ]; then
+            cat > build.bat << EOS
+call "${FMK_MSBUILD_PATH:=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat}"
+call $(win_path $conda_path)\condabin\$conda_cmd --no-remove-work-dir --keep-old-work $(win_path ./recipes)
+EOS
+            cmd.exe /c build.bat
+        fi
+        if [ $build -gt 0 ]; then
+            date=$(date +%Y%m%d)
+            app_path=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win-Conda-Py3.9-$date-x86_64
+            cd recipes
+            mkdir $app_path
+            export FMK_BUILD_DATE=$date
+            ./install.sh $app_path Windows ../$conda_path
+            if test $FMK_BRANDING; then
+                branding/$FMK_BRANDING/install.sh branding/$FMK_BRANDING $app_path
+            fi
+
+            export FMK_WB_BASE_PATH=$app_path
+            export FMK_REPO_VER_PATH="$app_path/VERSION"
+            ../../../../installwb.sh
+
+            cat << EOS > $app_path/RunFreeCAD.bat 
+cd %~dp0/bin
+set PATH=%~dp0\mingw64\bin;%PATH%
+set SSL_CERT_FILE=%~dp0\bin\Lib\site-packages\certifi\cacert.pem
+FreeCADLink.exe
+EOS
+            cat << EOS > $app_path/RunJupyter.bat 
+set QT_AUTO_SCREEN_SCALE_FACTOR=1
+cd %~dp0/bin
+set PATH=%~dp0\mingw64\bin;%PATH%
+set SSL_CERT_FILE=%~dp0\bin\Lib\site-packages\certifi\cacert.pem
+python.exe -m jupyter notebook
+EOS
+
+            if test -z $FMK_NO_ARCHIVE; then
+                7z a ../../../out/$app_path.7z $app_path
+            fi
+        fi
+        exit
+    fi
+
     pushd ../
 
     # cmake=${FMK_CMAKE_EXE:=`echo /cygdrive/c/program\ files/*/bin/cmake.exe`}
@@ -473,23 +560,23 @@ if test $win; then
 
         get_cmake "3.14.5"
 
-        if test -z $vc17; then
-            url=${FMK_LIBPACK_URL:=https://github.com/FreeCAD/FreeCAD/releases/download/0.19_pre/FreeCADLibs_12.1.2_x64_VC15.7z}
-            vs=15
-            vs_name="Visual Studio 15 2017 Win64"
-            build_name="Py3-Qt5"
+        if test $libpack_old; then
+            url=${FMK_LIBPACK_URL:=https://github.com/realthunder/FreeCAD_Assembly3/releases/download/0.11/FreeCADLibs_asm3_12.5.5_x64_VC17.7z}
+            vs="17.old"
+            cmake_opts=
         else
-            # url=${FMK_LIBPACK_URL:=https://github.com/apeltauer/FreeCAD/releases/download/LibPack_12.4.2/FreeCADLibs_12.4.2_x64_VC17.7z}
-            url=${FMK_LIBPACK_URL:=https://github.com/realthunder/FreeCAD_Assembly3/releases/download/0.11/FreeCADLibs_asm3_12.5.4_x64_VC17.7z}
+            url=${FMK_LIBPACK_URL:=https://github.com/realthunder/FreeCAD_Assembly3/releases/download/0.11/FreeCADLibs_asm3_12.6.1_x64_VC17.7z}
             vs=17
-            vs_name="Visual Studio 16 2019"
-            vs_arch="-A x64"
-            build_name="Py3-Qt5"
+            cmake_opts="-DBUILD_ENABLE_CXX_STD:STRING=C++17 -DBoost_COMPILER:STRING=vc143"
         fi
+
+        vs_name="Visual Studio 16 2019"
+        vs_arch="-A x64"
+        build_name="Py3-Qt5"
 
         if ! test -d libpack$vs; then
             wget -c $url -O libpack$vs.7z
-            7z x ../libpack$vs.7z
+            7z x libpack$vs.7z
             mv FreeCADLibs* libpack$vs
         fi
     else
@@ -526,7 +613,7 @@ if test $win; then
         fi
         export FREECAD_LIBPACK_DIR=$libpackpath
         "$cmake" \
-            -G "$vs_name" $vs_arch \
+            -G "$vs_name" $vs_arch $cmake_opts \
             -DFREECAD_LIBPACK_DIR=$libpackpath \
             -DFREECAD_USE_PYBIND11:BOOL=ON \
             -DBUILD_FLAT_MESH:BOOL=ON \
@@ -605,7 +692,7 @@ if test $win; then
     done
 
     # copy out the result to tmp directory
-    tar --exclude '*.pyc' --exclude '*.pdb' -cf - bin Mod Ext data | (cd $tmpdir && tar xvBf -)
+    tar --exclude '*.pyc' --exclude '*.pdb' -cf - bin Mod Ext data/Gui data/Mod data/3Dconnexion share | (cd $tmpdir && tar xvBf -)
 
     date=$(date +%Y%m%d)
     export FMK_BUILD_DATE=$date
@@ -614,21 +701,29 @@ if test $win; then
     fi
 
     cd $tmpdir
+    mv share/* data/
 
     # install personal workbench. This script will write version string to
     # ../VERSION file
     ../../../installwb.sh
 
+    cp -a $portable_git .
+
     cat << EOS > RunFreeCAD.bat 
 cd %~dp0/bin
+set PATH=%~dp0\PortableGit\bin;%PATH%
+set SSL_CERT_FILE=%~dp0\PortableGit\etc\pki\ca-trust\extracted\openssl\ca-bundle.trust.crt
 FreeCADLink.exe
 EOS
     cat << EOS > RunJupyter.bat 
 set QT_AUTO_SCREEN_SCALE_FACTOR=1
 cd %~dp0/bin
+set PATH=%~dp0\PortableGit\bin;%PATH%
+set SSL_CERT_FILE=%~dp0\PortableGit\etc\pki\ca-trust\extracted\openssl\ca-bundle.trust.crt
 python.exe -m jupyter notebook
 EOS
-    cp ../../../misc/FreeCADInit.ipynb bin/
+
+    # cp ../../../misc/FreeCADInit.ipynb bin/
 
     cd ..
     name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win64-$build_name-$date
@@ -738,9 +833,10 @@ if [ $(uname) = 'Darwin' ]; then
             -DBUILD_FEM_NETGEN=1           \
             -DFREECAD_CREATE_MAC_APP=1     \
             -DPYTHON_EXECUTABLE="/usr/local/bin/python3" \
-            -DBUILD_ENABLE_CXX_STD=C++14  \
+            -DBUILD_ENABLE_CXX_STD=C++17  \
             -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX"  \
             -DFREECAD_USE_3DCONNEXION=ON \
+            -DBUILD_FLAT_MESH:BOOL=ON \
             -D3DCONNEXIONCLIENT_FRAMEWORK="/Library/Frameworks/3DconnexionClient.framework" \
             -DBoost_NO_BOOST_CMAKE=ON \
             ../
@@ -782,6 +878,17 @@ if [ $(uname) = 'Darwin' ]; then
         $branding/$FMK_BRANDING/install.sh $branding/$FMK_BRANDING $base_path
     fi
 
+    cat > $INSTALL_PREFIX/pip.fcscript << EOS
+import sys
+from pip._internal.cli.main import main
+if __name__ == '__main__':
+    sys.argv = ['pip'] + sys.argv[2].split()
+    sys.exit(main())
+EOS
+    
+    # uninstall system include py-slvs. asm3 will prompt for installation when needed
+    $base_path/MacOS/FreeCADCmd $INSTALL_PREFIX/pip.fcscript 'uninstall py-slvs -y' || true
+
     # name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
     date=$(date +%Y%m%d)
     name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Py3-Qt5-$date-x86_64
@@ -798,14 +905,18 @@ if test $conda; then
     date=$(date +%Y%m%d)
     conda_img_name="FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
 
-cat << EOS > tmp.dockfile 
-FROM condaforge/linux-anvil-comp7
+    if ! test -f docker-built; then
+        cat << EOS > tmp.dockfile 
+FROM condaforge/linux-anvil-cos7-x86_64
 
+RUN yum install -y mesa-libGL-devel file \
 RUN yum install -y mesa-libGL-devel \
     && useradd -u $UID -ms /bin/bash conda \
     && echo 'conda:conda' |chpasswd
 EOS
-    bash -c "$sudo $docker_exe build -t $conda -f tmp.dockfile ."
+        bash -c "$sudo $docker_exe build -t $conda -f tmp.dockfile ."
+        touch docker-built
+    fi
 
     rm -rf recipes
     cp -a $conda_recipes recipes
