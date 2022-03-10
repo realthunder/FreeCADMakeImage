@@ -20,6 +20,7 @@ requirements:
         - {{ compiler("cxx") }}
         - {{ cdt('xorg-x11-proto-devel') }} # [linux]
         - cmake
+        - ninja
     host:
         - qt 5.*
         - extra-cmake-modules
