@@ -493,8 +493,8 @@ if test $win; then
 
         if [ $build -ne 3 ]; then
             cat > build.bat << EOS
-call "${FMK_MSBUILD_PATH:=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat}"
-call $(win_path $conda_path)\condabin\$conda_cmd --no-remove-work-dir --keep-old-work $(win_path ./recipes)
+call "${FMK_MSBUILD_PATH:=C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat}"
+call $(win_path $conda_path)\\condabin\\$conda_cmd --no-remove-work-dir --keep-old-work $(win_path ./recipes)
 EOS
             cmd.exe /c build.bat
         fi
