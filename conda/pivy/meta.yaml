@@ -23,12 +23,12 @@ requirements:
     - ninja
     - swig
   host:
-    - python
+    - python 3.9
     - coin3d
     - soqt
     - qt
   run:
-    - python
+    - python 3.9
     - coin3d
     - qt
     - pyside2
