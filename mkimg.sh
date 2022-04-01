@@ -398,6 +398,13 @@ git_fetch() {
     popd
 }
 
+# check for windows building
+if uname -a | grep -iq cygwin; then
+    win=cygwin
+elif uname -a | grep -iq microsoft; then
+    win=wsl
+fi
+
 if test $conda; then
     build_dir=conda/$img_name
 else
@@ -408,26 +415,19 @@ else
     fi
 
     if test $win; then
-        if ! test -d PortableGit; then
+        if ! test -d build/PortableGit; then
             wget -c https://github.com/git-for-windows/git/releases/download/v2.35.1.windows.2/PortableGit-2.35.1.2-64-bit.7z.exe -O build/PortableGit.7z.exe
             mkdir build/PortableGit
             pushd build/PortableGit
             7z x ../PortableGit.7z.exe
             popd
         fi
-        portable_git=$PWD/PortableGit
+        portable_git=$PWD/build/PortableGit
     fi
 fi
 
 mkdir -p build/$build_dir
 cd build/$build_dir
-
-# check for windows building
-if uname -a | grep -iq cygwin; then
-    win=cygwin
-elif uname -a | grep -iq microsoft; then
-    win=wsl
-fi
 
 if [[ $daily != "" && ( $win != "" || $conda == "" ) ]]; then
     repo=repo-Daily
