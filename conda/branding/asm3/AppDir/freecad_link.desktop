@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Name=FreeCAD Link Branch
-Exec=AppRun
+Exec=AppRun %F
 Icon=freecad_link
 Type=Application
 Categories=Engineering;
