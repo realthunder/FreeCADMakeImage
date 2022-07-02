@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+HERE=$(dirname "$(dirname "$0")")
+HERE=$(cd "$HERE";pwd)
+export LD_LIBRARY_PATH=$HERE/lib:$LD_LIBRARY_PATH
+export PYTHONHOME=$HERE
+export PYTHONPATH=`echo $HERE/lib/python3*`
+# export QT_QPA_PLATFORM_PLUGIN_PATH=${HERE}/plugins
+# export QT_XKB_CONFIG_ROOT=${HERE}/lib
+export FONTCONFIG_FILE=/etc/fonts/fonts.conf
+export FONTCONFIG_PATH=/etc/fonts
+export LANG="UTF-8"  # https://forum.freecadweb.org/viewtopic.php?f=22&t=42644
+export SSL_CERT_FILE=${PYTHONPATH}/site-packages/certifi/cacert.pem # https://forum.freecadweb.org/viewtopic.php?f=3&t=42825
+export GIT_SSL_CAINFO=${SSL_CERT_FILE}
+if [[ `sw_vers -productVersion` > 10.99 ]] ; then
+    export QT_MAC_WANTS_LAYER=1
+fi
+if [ ! -z "$1" ] && [ -e "$HERE/MacOS/$1" ] ; then
+    export PATH="$HERE/MacOS":$PATH
+    name=$1
+    shift
+elif test -f "$HERE/MacOS/FreeCADLink"; then
+    name=FreeCADLink
+else
+    name=FreeCAD
+fi
+"$HERE/MacOS/$name" "$@"
