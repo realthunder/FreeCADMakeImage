@@ -10,6 +10,7 @@
     <MaintainerUrl>https://github.com/realthunder/FreeCAD</MaintainerUrl>
     <WindowIcon>freecad_link.svg</WindowIcon>
     <SplashScreen>freecad_link_splash.png</SplashScreen>
+    <AboutImage>freecad_link_splash.png</AboutImage>
     <SplashGif>freecad_link_logo.gif</SplashGif>
     <BuildRevisionDate>_FC_BUILD_DATE_</BuildRevisionDate>
     <VendorCFGPrefix>link.</VendorCFGPrefix>
