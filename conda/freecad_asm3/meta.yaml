@@ -1,7 +1,6 @@
 {% set name = "freecad-asm3" %}
 {% set version = "0.20" %}
 
-
 package:
   name: {{ name }}
   version: {{ version }}
@@ -10,34 +9,38 @@ source:
   path: ../../repo
 
 build:
-  number: 2
+  number: 1
   skip: true  # [py<37]
 
 requirements:
+  run_constrained:
+    - moab * mpi_mpich_tempest*
   build:
     - {{ compiler("cxx") }}
-    - {{ cdt('mesa-libgl-devel') }}  # [linux]
-    - {{ cdt('mesa-dri-drivers') }}  # [linux]
-    - {{ cdt('libselinux') }}  # [linux]
-    - {{ cdt('libxdamage') }}  # [linux]
-    - {{ cdt('libxfixes') }}  # [linux]
-    - {{ cdt('libxxf86vm') }}  # [linux]
-    - {{ cdt('libxcb') }}  # [linux]
-    - {{ cdt('libxext') }}  # [linux]
+    - {{ cdt('mesa-libgl-devel') }}      # [linux]
+    - {{ cdt('mesa-dri-drivers') }}      # [linux]
+    - {{ cdt('mesa-libegl-devel') }}     # [linux]
+    - {{ cdt('libselinux') }}            # [linux]
+    - {{ cdt('libxdamage') }}            # [linux]
+    - {{ cdt('libxfixes') }}             # [linux]
+    - {{ cdt('libxxf86vm') }}            # [linux]
+    - {{ cdt('libxcb') }}                # [linux]
+    - {{ cdt('libxext') }}               # [linux]
     - {{ cdt('xorg-x11-server-xvfb') }}  # [linux]
-    - {{ cdt('libxau') }}  # [linux]
+    - {{ cdt('libxau') }}                # [linux]
+    - {{ cdt('libxi-devel') }}           # [linux]
     - cmake
     - ninja
     - git
+    - sed  # [unix]
   host:
-    - python 3.9
     - boost-cpp
-    - qt
+    - python 3.9
+    - qt 5.12
     - occt
     - xerces-c
     - zlib
     - vtk
-    - smesh
     - netgen
     - swig
     - eigen
@@ -45,44 +48,39 @@ requirements:
     - coin3d
     - pivy
     - pyside2
+    - smesh >=9.7
     - doxygen
     - hdf5
-    - xorg-libxi  # [linux]
-    - xorg-libxmu  # [linux]
-    - xorg-libxt  # [linux]
-    - tbb-devel
     - freetype
-    - libspnav # [linux]
+    - libspnav  # [linux]
     - pcl
     - six
     - ply
+    - matplotlib
   run:
-    - {{ pin_compatible("pyside2") }}
-    - python 3.9
+    - pyside2
     - vtk
     - occt
-    - qt
+    - qt 5.12
     - xerces-c
     - zlib
     - boost-cpp
     - hdf5
+    - python 3.9
     - coin3d
     - pivy
-    - smesh
-    - netgen
-    - xorg-libxi  # [linux]
-    - xorg-libxmu  # [linux]
-    - xorg-libxt  # [linux]
+    - {{ pin_compatible('smesh', max_pin='x.x.x') }}
     - freetype
     - numpy
     - six
     - future
     - pyyaml
-    - ply
-    - opencamlib
-    # - solvespace
-    - libspnav # [linux]
+    - libspnav  # [linux]
     - pcl
+    - ply
+    - gmsh
+    - graphviz
+    - opencamlib
 
 test:
   commands:
