@@ -33,21 +33,19 @@ else
     fi
     $conda_cmd create \
         -p $app_path \
-        python=3.9 calculix blas=*=openblas git gitpython \
+        python qt=5.12 occt=7.5 vtk=9 calculix blas=*=openblas git gitpython \
         opencamlib matplotlib-base numpy sympy pandas $appimage_updater \
         gmsh netgen scipy pythonocc-core six \
         pyyaml ifcopenshell boost-cpp libredwg pycollada \
         lxml xlutils olefile requests openglider \
         blinker opencv qt.py nine docutils jupyter notebook \
         --copy \
-        --no-default-packages \
         -c freecad/label/dev \
-        -c freecad \
         -c conda-forge \
         -y
 fi
 
-local_pkgs="coin3d $FMK_FREECAD_PKGNAME"
+local_pkgs="coin3d pivy $FMK_FREECAD_PKGNAME"
 if test $appimage; then
     local_pkgs="$local_pkgs fcitx-qt5"
 fi
