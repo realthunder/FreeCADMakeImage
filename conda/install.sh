@@ -227,12 +227,15 @@ if [[ $appdir == */usr ]]; then
     appdir="$appdir/../"
 fi
 
-zsync='-u gh-releases-zsync|realthunder|FreeCAD_assembly3|latest'
+zsync='-u gh-releases-zsync|realthunder|FreeCAD|latest'
+ver=
 case $image_name in
 FreeCAD-asm3-Stable-Conda-Py3-Qt5-*-x86_64)
+    ver="Stable"
     zsync="$zsync|FreeCAD-asm3-Stable-Conda-Py3-Qt5-*-x86_64.AppImage.zsync"
     ;;
 FreeCAD-asm3-Daily-Conda-Py3-Qt5-*-x86_64)
+    ver="Daily"
     zsync="$zsync|FreeCAD-asm3-Daily-Conda-Py3-Qt5-*-x86_64.AppImage.zsync"
     ;;
 *)
@@ -240,5 +243,6 @@ FreeCAD-asm3-Daily-Conda-Py3-Qt5-*-x86_64)
     ;;
 esac
 
+export VERSION="$ver-$FMK_BUILD_DATE"
 ARCH=x86_64 $apptool/AppRun $appdir $zsync ${image_name}.AppImage
 
