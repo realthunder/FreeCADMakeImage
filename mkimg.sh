@@ -129,6 +129,12 @@ while test $1; do
         nofetch)
             gitfetch=0
             ;;
+        date=*)
+            date=${arg#*=}
+            export FMK_BUILD_DATE=$date
+            shift
+            continue
+            ;;
         conda)
             conda=${arg#*=}
             if [ $conda = conda ]; then
@@ -216,6 +222,8 @@ aimg_url=${FMK_AIMG_URL:=https://github.com/realthunder/AppImages.git}
 aimg_branch=${FMK_AIMG_BRANCH:=master}
 aimg_recipe=${FMK_AIMG_RECIPE:=recipe-$dist.yml}
 
+date=${FMK_BUILD_DATE:=`date +%Y%m%d`}
+
 prepare_remote() {
     # copy Version.h header and make sure it works for local and remote build
     if test "$FMK_VERSION_HEADER"; then
@@ -238,7 +246,6 @@ prepare_remote() {
     chmod +x tmp.sh
     set +x
     if test -z "$FMK_CONDA_IMG_NAME"; then
-        date=$(date +%Y%m%d)
         export FMK_CONDA_IMG_NAME=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date.glibc2.12-x86_64
     fi
     env | while read -r line; do
@@ -499,7 +506,6 @@ EOS
             cmd.exe /c build.bat
         fi
         if [ $build -gt 0 ]; then
-            date=$(date +%Y%m%d)
             app_path=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win-Conda-Py3.9-$date-x86_64
             cd recipes
             mkdir $app_path
@@ -562,12 +568,15 @@ EOS
 
         if test $libpack_old; then
             url=${FMK_LIBPACK_URL:=https://github.com/realthunder/FreeCAD_Assembly3/releases/download/0.11/FreeCADLibs_asm3_12.5.5_x64_VC17.7z}
-            vs="17.old"
+            # vs="17.old"
+            vs=".0.19"
             cmake_opts=
         else
             url=${FMK_LIBPACK_URL:=https://github.com/realthunder/FreeCAD_Assembly3/releases/download/0.11/FreeCADLibs_asm3_12.6.1_x64_VC17.7z}
-            vs=17
-            cmake_opts="-DBUILD_ENABLE_CXX_STD:STRING=C++17 -DBoost_COMPILER:STRING=vc143"
+            # vs=17
+            vs=".0.20"
+            # cmake_opts="-DBUILD_ENABLE_CXX_STD:STRING=C++17 -DBoost_COMPILER:STRING=vc143"
+            cmake_opts="-DBUILD_ENABLE_CXX_STD:STRING=C++17"
         fi
 
         vs_name="Visual Studio 16 2019"
@@ -694,7 +703,6 @@ EOS
     # copy out the result to tmp directory
     tar --exclude '*.pyc' --exclude '*.pdb' -cf - bin Mod Ext data/Gui data/Mod data/3Dconnexion share | (cd $tmpdir && tar xvBf -)
 
-    date=$(date +%Y%m%d)
     export FMK_BUILD_DATE=$date
     if test $FMK_BRANDING; then
         $branding/$FMK_BRANDING/install.sh $branding/$FMK_BRANDING/ $tmpdir
@@ -729,7 +737,11 @@ EOS
     name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win64-$build_name-$date
 
     # archive the result
-    mv tmp $name
+    while ! mv tmp $name; do
+        echo 'Retry rename $name'
+        sleep 20
+    done
+
     if test -z $FMK_NO_ARCHIVE; then
         7z a ../out/$name.7z $name
     fi
@@ -783,7 +795,6 @@ if [ $(uname) = 'Darwin' ]; then
             $conda_cmd --no-remove-work-dir --keep-old-work ./recipes
         fi
         if [ $build -gt 0 ]; then
-            date=$(date +%Y%m%d)
             app_path=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Conda-Py3-Qt5-$date-x86_64
             cd recipes
             cp -a MacBundle $app_path
@@ -869,7 +880,6 @@ if [ $(uname) = 'Darwin' ]; then
     base_path="$APP_PATH/Contents"
     export FMK_WB_BASE_PATH="$base_path"
     export FMK_REPO_VER_PATH="$INSTALL_PREFIX/VERSION"
-    date=$(date +%Y%m%d)
     export FMK_BUILD_DATE=$date
 
     ../../../../installwb.sh
@@ -890,7 +900,6 @@ EOS
     $base_path/MacOS/FreeCADCmd $INSTALL_PREFIX/pip.fcscript 'uninstall py-slvs -y' || true
 
     # name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
-    date=$(date +%Y%m%d)
     name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Py3-Qt5-$date-x86_64
     echo $name
     rm -f ../../../out/$name.dmg
@@ -902,7 +911,6 @@ fi
 
 if test $conda; then
     docker_name=$conda
-    date=$(date +%Y%m%d)
     conda_img_name="FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
 
     if ! test -f docker-built; then
@@ -1034,7 +1042,6 @@ if [ $build -gt 1 ]; then
     # now generate the AppImage using the recipe
     DEBDIR="$PWD/.." ARCH=x86_64 ./pkg2appimage ../$aimg_recipe
 
-    date=$(date +%Y%m%d)
     if [ $dist = bionic ]; then
         build_name=Bionic-Py3n2-Qt5
     else
