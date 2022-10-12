@@ -1,6 +1,6 @@
 {% set name = "pivy" %}
-{% set version = "0.6.6" %}
-{% set sha256 = "27204574d894cc12aba5df5251770f731f326a3e7de4499e06b5f5809cc5659e" %}
+{% set version = "0.6.7" %}
+{% set sha256 = "37e33d85117aac27640e011df74ddcd77f270428300df916b46ee5c50645d582" %}
 
 package:
   name: {{ name }}
@@ -12,7 +12,7 @@ source:
   sha256: {{ sha256 }}
 
 build:
-  number: 0
+  number: 5
 
 requirements:
   build:
@@ -26,16 +26,19 @@ requirements:
     - python 3.9
     - coin3d
     - soqt
-    - qt
+    - qt 5.12
+    - moab * mpi_mpich_tempest_*   # [osx]
   run:
     - python 3.9
     - coin3d
-    - qt
+    - qt 5.12
     - pyside2
     - soqt
+    - moab * mpi_mpich_tempest_* # [osx]
 
 test:
   imports:
+    - sys
     - pivy.coin
     # - pivy.gui.soqt
 
