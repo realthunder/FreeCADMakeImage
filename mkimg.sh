@@ -532,6 +532,7 @@ set PATH=%~dp0\mingw64\bin;%PATH%
 set SSL_CERT_FILE=%~dp0\bin\Lib\site-packages\certifi\cacert.pem
 python.exe -m jupyter notebook
 EOS
+            chmod +x $app_dir/bin/python.exe
             py_version=`$app_dir/bin/python.exe --version | cut -d' ' -f2 | cut -d. -f'1 2'`
             bundle_name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win-Conda-Py$py_version-$date-x86_64
 
@@ -737,6 +738,7 @@ EOS
 
     # cp ../../../misc/FreeCADInit.ipynb bin/
 
+    chmod +x bin/python.exe
     py_version=`bin/python.exe --version | cut -d' ' -f2 | cut -d. -f'1 2'`
     cd ..
     name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win64-LibPack-Py$py_version-$date
