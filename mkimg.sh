@@ -246,7 +246,7 @@ prepare_remote() {
     chmod +x tmp.sh
     set +x
     if test -z "$FMK_CONDA_IMG_NAME"; then
-        export FMK_CONDA_IMG_NAME=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date.glibc2.12-x86_64
+        export FMK_CONDA_IMG_NAME=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Conda-Py3-$date.glibc2.12-x86_64
     fi
     env | while read -r line; do
         if [ "${line:0:4}" = FMK_ ]; then
@@ -506,35 +506,42 @@ EOS
             cmd.exe /c build.bat
         fi
         if [ $build -gt 0 ]; then
-            app_path=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win-Conda-Py3.9-$date-x86_64
+            app_dir=AppDir_$img_name
             cd recipes
-            mkdir $app_path
+            mkdir $app_dir
             export FMK_BUILD_DATE=$date
-            ./install.sh $app_path Windows ../$conda_path
+            ./install.sh $app_dir Windows ../$conda_path
             if test $FMK_BRANDING; then
-                branding/$FMK_BRANDING/install.sh branding/$FMK_BRANDING $app_path
+                branding/$FMK_BRANDING/install.sh branding/$FMK_BRANDING $app_dir
             fi
 
-            export FMK_WB_BASE_PATH=$app_path
-            export FMK_REPO_VER_PATH="$app_path/VERSION"
+            export FMK_WB_BASE_PATH=$app_dir
+            export FMK_REPO_VER_PATH="$app_dir/VERSION"
             ../../../../installwb.sh
 
-            cat << EOS > $app_path/RunFreeCAD.bat 
+            cat << EOS > $app_dir/RunFreeCAD.bat 
 cd %~dp0/bin
 set PATH=%~dp0\mingw64\bin;%PATH%
 set SSL_CERT_FILE=%~dp0\bin\Lib\site-packages\certifi\cacert.pem
 FreeCADLink.exe
 EOS
-            cat << EOS > $app_path/RunJupyter.bat 
+            cat << EOS > $app_dir/RunJupyter.bat 
 set QT_AUTO_SCREEN_SCALE_FACTOR=1
 cd %~dp0/bin
 set PATH=%~dp0\mingw64\bin;%PATH%
 set SSL_CERT_FILE=%~dp0\bin\Lib\site-packages\certifi\cacert.pem
 python.exe -m jupyter notebook
 EOS
+            py_version=`$app_dir/bin/python.exe --version | cut -d' ' -f2 | cut -d. -f'1 2'`
+            bundle_name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win-Conda-Py$py_version-$date-x86_64
+
+            while ! mv $app_dir $bundle_name; do
+                echo 'Retry rename $bundle_name'
+                sleep 20
+            done
 
             if test -z $FMK_NO_ARCHIVE; then
-                7z a ../../../out/$app_path.7z $app_path
+                7z a ../../../out/$bundle_name.7z $bundle_name
             fi
         fi
         exit
@@ -581,7 +588,6 @@ EOS
 
         vs_name="Visual Studio 16 2019"
         vs_arch="-A x64"
-        build_name="Py3-Qt5"
 
         if ! test -d libpack$vs; then
             wget -c $url -O libpack$vs.7z
@@ -601,8 +607,6 @@ EOS
             7z x libpack.7z
             mv FreeCADLibs* libpack
         fi
-
-        build_name="Py2-Qt4"
     fi
 
     libpack=$PWD/libpack$vs
@@ -733,8 +737,9 @@ EOS
 
     # cp ../../../misc/FreeCADInit.ipynb bin/
 
+    py_version=`bin/python.exe --version | cut -d' ' -f2 | cut -d. -f'1 2'`
     cd ..
-    name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win64-$build_name-$date
+    name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Win64-LibPack-Py$py_version-$date
 
     # archive the result
     while ! mv tmp $name; do
@@ -795,7 +800,7 @@ if [ $(uname) = 'Darwin' ]; then
             $conda_cmd --no-remove-work-dir --keep-old-work ./recipes
         fi
         if [ $build -gt 0 ]; then
-            app_path=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Conda-Py3-Qt5-$date-x86_64
+            app_path=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Conda-Py3-$date-x86_64
             cd recipes
             cp -a MacBundle $app_path
             base_path=$app_path/FreeCAD.app/Contents/Resources
@@ -900,7 +905,7 @@ EOS
     $base_path/MacOS/FreeCADCmd $INSTALL_PREFIX/pip.fcscript 'uninstall py-slvs -y' || true
 
     # name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
-    name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Py3-Qt5-$date-x86_64
+    name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Py3-$date-x86_64
     echo $name
     rm -f ../../../out/$name.dmg
     hdiutil create -fs HFS+ -srcfolder "$APP_PATH" ../../../out/$name.dmg
@@ -911,7 +916,7 @@ fi
 
 if test $conda; then
     docker_name=$conda
-    conda_img_name="FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Conda-Py3-Qt5-$date-glibc2.12-x86_64"
+    conda_img_name="FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-Conda-Py3-$date-glibc2.12-x86_64"
 
     if ! test -f docker-built; then
         cat << EOS > tmp.dockfile 

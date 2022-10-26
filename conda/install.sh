@@ -98,7 +98,7 @@ if test $win; then
     # mv Library/mingw64 .
     cp -a Library/mingw64 .
     mv Library/plugins .
-    mkdir bin
+    mkdir -p bin
     mv share Scripts Lib DLLs bin/
     mv packages.txt python* msvc* ucrt* bin/
     rm -f Library/bin/api*.dll
@@ -201,6 +201,9 @@ app_path="$PWD/"
 app_path_rpl=$(replace_path_gen "$app_path" ../)
 find . -type f -exec sed -i -e "s@$app_path@$app_path_rpl@g" {} \;
 
+py_version=`bin/python --version | cut -d' ' -f2 | cut -d. -f'1 2'`
+image_name=${image_name/-Py3-/-Py$py_version-}
+
 popd
 
 if test $FMK_BRANDING; then
@@ -230,19 +233,19 @@ fi
 zsync='-u gh-releases-zsync|realthunder|FreeCAD|latest'
 ver=
 case $image_name in
-FreeCAD-asm3-Stable-Conda-Py3-Qt5-*-x86_64)
-    ver="Stable"
-    zsync="$zsync|FreeCAD-asm3-Stable-Conda-Py3-Qt5-*-x86_64.AppImage.zsync"
+FreeCAD-asm3-Stable-Conda-*-x86_64)
+    ver="Stable-"
+    zsync="$zsync|FreeCAD-asm3-Stable-Conda-*-x86_64.AppImage.zsync"
     ;;
-FreeCAD-asm3-Daily-Conda-Py3-Qt5-*-x86_64)
-    ver="Daily"
-    zsync="$zsync|FreeCAD-asm3-Daily-Conda-Py3-Qt5-*-x86_64.AppImage.zsync"
+FreeCAD-asm3-Daily-Conda-*-x86_64)
+    ver="Daily-"
+    zsync="$zsync|FreeCAD-asm3-Daily-Conda-*-x86_64.AppImage.zsync"
     ;;
 *)
     zsync=
     ;;
 esac
 
-export VERSION="$ver-$FMK_BUILD_DATE"
+export VERSION="$ver$FMK_BUILD_DATE"
 ARCH=x86_64 $apptool/AppRun $appdir $zsync ${image_name}.AppImage
 
