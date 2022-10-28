@@ -1016,7 +1016,7 @@ EOS
     bash -c "$sudo $docker_run --rm -ti -v $PWD:/home/conda $conda ./tmp_build.sh"
 
     if [ $build -gt 1 ]; then
-        mv ${conda_img_name}.AppImage* ../../out/
+        mv *.AppImage* ../../out/
     fi
 
     exit
