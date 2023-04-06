@@ -1,0 +1,57 @@
+name: Make bundle
+
+on:
+  push:
+    tags:
+      - "*"
+
+  workflow_dispatch:
+
+jobs:
+  make_bundle:
+    name: Make bundle on ${{ matrix.os }} ${{ matrix.arch }} py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # fail-fast: false
+      matrix:
+        # os: [macos-11, ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
+        python-version: ["3.10"]
+        arch : ["64"]
+        # include:
+        #   - os: windows-latest
+        #     python-version: "3.8"
+        #     arch : "64"
+
+    steps:
+      - uses: actions/checkout@v3
+        repository: realthunder/FreeCADMakeImage
+      - name: Conda environment creation and activation
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          environment-file: dist/conda/build_env.yaml    # Path to the build conda environment
+          auto-update-conda: false
+          auto-activate-base: false
+          show-channel-urls: true
+          # use-mamba: true
+          # miniforge-variant: Mambaforge
+      - name: Make bundle
+        shell: bash -el {0}
+        run: conda/make-bundle.sh ${{ github.ref_name }} ${{ matrix.python-version }}
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        env:
+            RELEASE_NAME: ${{ github.ref_name }}
+        if: endsWith(github.ref_name, 'tip')
+          env:
+            RELEASE_NAME: Tip
+        if: endsWith(github.ref_name, 'edge')
+          env:
+            RELEASE_NAME: Edge
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          body_path: changelog.txt
+          files: build/out/*
+          name: ${{ env.RELEASE_NAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
