@@ -4,24 +4,25 @@ set -ex
 
 tag=${1:=tip}
 py=${2:=3.10}
-appdir=build
-out=build/out
+mkdir -p build
+cd build
+out=out
 mkdir -p $out
 conda_cmd=${CONDA_CMD:=conda}
 
-changelog=`sed -n "/-- $tag --/=" changelog.md`
+changelog=`sed -n "/-- $tag --/=" ../changelog.md`
 if test -z $changelog; then
     echo "Warning: no change log"
     echo "Release $tag" > changelog.txt
 else
-    head -$((changelog - 1)) changelog.md > changelog.txt
+    head -$((changelog - 1)) ../changelog.md > changelog.txt
     echo "Changelog:"
     cat changelog.txt
 fi
 
 pkgs="python=*$py calculix blas=*=openblas git gitpython \
       matplotlib-base numpy sympy pandas gmsh scipy six qtpy \
-      pyyaml ifcopenshell libredwg pycollada \
+      pyyaml pycollada \
       lxml xlutils olefile requests \
       blinker opencv qt.py nine docutils fmt jupyter notebook"
 
@@ -37,6 +38,10 @@ arm64)
     ;;
 esac
 
+if [ $arch != aarch64 ]; then
+    pkgs="$pkgs libredwg ifcopenshell opencamlib"
+fi
+
 os=`uname`
 case `uname` in
 Windows*|MINGW*)
@@ -44,17 +49,16 @@ Windows*|MINGW*)
     ;;
 Linux*)
     os=Linux
-    cp -a conda/AppDir $appdir
-    appdir=$appdir/AppDir/usr
-    pkgs="$pkgs appimage-updater-bridge"
+    cp -a ../conda/AppDir .
+    appdir=AppDir/usr
     if [ $arch != aarch64 ]; then
-        pkgs="$pkgs fcitx-qt5"
+        pkgs="$pkgs fcitx-qt5 appimage-updater-bridge"
     fi
     ;;
 Darwin*)
     os=MacOS
-    cp -a conda/MacBundle $appdir
-    appdir=$appdir/FreeCAD.app/Contents/Resources
+    cp -a ../conda/MacBundle FreeCAD.app
+    appdir=FreeCAD.app/Contents/Resources
     ;;
 *)
     echo "Unknown os $os"
@@ -69,24 +73,24 @@ case $tag in
     img_prefix="FreeCAD-Link-Tip"
     img_postfix=${tag%tip}
     release=Tip
-    echo "::set-output name=RELEASE_NAME::Tip"
-    echo "::set-output name=IS_PRERELEASE::true"
-    branding=conda/branding/asm3-daily
+    echo "RELEASE_NAME=Tip" >> $GITHUB_ENV
+    echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+    branding=../conda/branding/asm3-daily
     ;;
 *edge)
     img_prefix="FreeCAD-Link-Edge"
     img_postfix=${tag%edge}
-    echo "::set-output name=RELEASE_NAME::Edge"
-    echo "::set-output name=IS_PRERELEASE::true"
+    echo "RELEASE_NAME=Edge" >> $GITHUB_ENV
+    echo "IS_PRERELEASE=true" >> $GITHUB_ENV
     release=Edge
-    branding=conda/branding/asm3-daily
+    branding=../conda/branding/asm3-daily
     ;;
 *stable)
     img_prefix="FreeCAD-Link-Stable"
     img_postfix=${tag%stable}
-    echo "::set-output name=RELEASE_NAME::$tag"
-    echo "::set-output name=IS_PRERELEASE::false"
-    branding=conda/branding/asm3
+    echo "RELEASE_NAME=$tag" >> $GITHUB_ENV
+    echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+    branding=../conda/branding/asm3
     release=latest
     ;;
 *)
@@ -98,11 +102,10 @@ img_prefix="$img_prefix-$os-$arch-py$py-"
 image_name="$img_prefix$img_postfix"
 
 img_prefix="$img_prefix"'*'
-echo "::set-output name=RELEASE_ASSETS::$img_prefix"
+echo "RELEASE_ASSETS=$img_prefix" >> $GITHUB_ENV
 
 if [ $os = Win ]; then
-    appdir=$appdir/$image_name
-    mkdir -p $appdir
+    appdir=$image_name
 fi
 
 $conda_cmd create -p $appdir $pkgs \
@@ -112,7 +115,7 @@ export FMK_WB_BASE_PATH=$appdir
 export FMK_WB_LIST="asm3"
 export FMK_WB_PATH_asm3=Mod
 export FMK_WB_URL_asm3=https://github.com/realthunder/FreeCAD_assembly3
-./installwb.sh 
+../installwb.sh 
 
 # installing some additional libraries with pip
 # conda run -p $appdir pip install https://github.com/looooo/freecad_pipintegration/archive/master.zip
@@ -146,7 +149,7 @@ fi
 
 # conda run -p $appdir python -m compileall $appdir/usr/lib/python$py_ver $appdir/usr/Mod
 
-if [ $os = Linux]; then
+if [ $os = Linux ]; then
     # uninstall some packages not needed
     $conda_cmd uninstall -p $appdir libclang --force -y || true
 fi
@@ -227,10 +230,6 @@ rm -rf share/man
 #rm -rf lib/python?.?/site-packages/{setuptools,pip}
 #rm -rf lib/python?.?/distutils
 
-ls -l
-ls -l bin
-find . -iname FreeCAD
-
 if [ $os = MacOS ]; then
     mv Library ../
 fi
@@ -305,20 +304,19 @@ popd
 
 $branding/install.sh $branding $appdir
 
-apptool=appimagetool
-if ! test -e $apptool/AppRun; then
-    if test -d $apptool; then
-        echo "Invalid appimagetool directory"
-        exit 1
+apptool=appiamgetool
+if ! which $apptool; then
+    rm -rf $apptool
+    appimagetool=appimagetool-$arch.AppImage
+    wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/$appimagetool
+    chmod +x $appimagetool
+    if [ $arch = aarch64 ]; then
+        # Trouble running on aarch64. See https://github.com/AppImage/AppImageKit/issues/1056
+        sed -i 's|AI\x02|\x00\x00\x00|' $appimagetool
     fi
-    if test -d squashfs-root; then
-        echo "There is an existing AppImage extracted directory 'squashfs-root'"
-        exit 1
-    fi
-    curl -OL https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-$arch.AppImage
-    chmod +x appimagetool-$arch.AppImage
-    ./appimagetool-$arch.AppImage --appimage-extract
+    ./$appimagetool --appimage-extract
     mv squashfs-root $apptool
+    apptool=$apptool/AppRun
 fi
 
 if [[ $appdir == */usr ]]; then
@@ -328,6 +326,6 @@ fi
 zsync="-u gh-releases-zsync|realthunder|FreeCAD|$release|$img_prefix.AppImage.zsync"
 
 export VERSION="$tag-$py"
-ARCH=$arch $apptool/AppRun $appdir $zsync $image_name.AppImage
+ARCH=$arch $apptool $appdir $zsync $image_name.AppImage
 shasum -a 256 $image_name.AppImage > $image_name.AppImage-SHA256.txt
 mv FreeCAD*.AppImage* $out

@@ -74,4 +74,4 @@ for wb in $FMK_WB_LIST; do
     fi
 done
 
-echo "$FMK_IMG_NAME-${img_date:0:8}-$ver" > ${FMK_REPO_VER_PATH:=../VERSION}
+# echo "$FMK_IMG_NAME-${img_date:0:8}-$ver" > ${FMK_REPO_VER_PATH:=../VERSION}
