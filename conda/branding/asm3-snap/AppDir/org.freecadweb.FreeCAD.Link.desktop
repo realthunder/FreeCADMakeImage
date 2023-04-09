@@ -1,8 +1,8 @@
 [Desktop Entry]
 Version=1.0
 Name=FreeCAD Link Branch
-Exec=AppRun %F
-Icon=freecad_link
+Exec=AppRun
+Icon=org.freecadweb.FreeCAD.Link
 Type=Application
 Categories=Engineering;
 Comment=Feature based Parametric Modeler
