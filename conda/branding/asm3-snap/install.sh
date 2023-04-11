@@ -1,1 +1,0 @@
-../asm3/install.sh
