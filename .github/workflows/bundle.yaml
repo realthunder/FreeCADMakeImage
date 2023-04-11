@@ -14,20 +14,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # os: [macos-11, ubuntu-latest, windows-latest]
-        os: [ubuntu-latest]
+        os: [macos-11, ubuntu-latest, windows-latest]
         python-version: ["3.10"]
-        # arch : ["64"]
-        arch : ["aarch64"]
-        # include:
-        #   - os: windows-latest
-        #     python-version: "3.8"
-        #     arch: "64"
+        arch : ["64"]
+        include:
+          - os: windows-latest
+            python-version: "3.8"
+            arch: "64"
+          - os: ubuntu-latest
+            python-version: "3.10"
+            arch: "aarch64"
 
     steps:
       - uses: actions/checkout@v3
         with:
           repository: realthunder/FreeCADMakeImage
+          submodules: true
 
       - name: Conda environment creation and activation
         if: ${{ matrix.arch == '64' }}
