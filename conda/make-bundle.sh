@@ -2,20 +2,21 @@
 
 set -ex
 
-tag=${1:=tip}
-py=${2:=3.10}
+tag=${1:-tip}
+py=${2:-3.10}
+changelog_file=${3:-../changelog.md}
 mkdir -p build
 cd build
 out=out
 mkdir -p $out
 conda_cmd=${CONDA_CMD:=conda}
 
-changelog=`sed -n "/-- $tag --/=" ../changelog.md`
+changelog=`sed -n "/-- $tag --/=" $changelog_file`
 if test -z $changelog; then
     echo "Warning: no change log"
     echo "Release $tag" > changelog.txt
 else
-    head -$((changelog - 1)) ../changelog.md > changelog.txt
+    head -$((changelog - 1)) $changelog_file > changelog.txt
     echo "Changelog:"
     cat changelog.txt
 fi

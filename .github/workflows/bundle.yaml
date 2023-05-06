@@ -9,8 +9,6 @@ on:
 
 jobs:
   make_bundle:
-    name: Make bundle on ${{ matrix.os }} ${{ matrix.arch }} py${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -24,105 +22,9 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.10"
             arch: "aarch64"
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          repository: realthunder/FreeCADMakeImage
-          submodules: true
-
-      - name: Conda environment creation and activation
-        if: ${{ matrix.arch == '64' }}
-        uses: realthunder/setup-miniconda@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-          auto-update-conda: false
-          auto-activate-base: false
-          show-channel-urls: true
-          # use-mamba: ${{ startsWith(matrix.os, 'macos') }}
-          miniforge-variant: Mambaforge
-
-      - name: Make bundle for ${{ matrix.arch }}
-        if: ${{ matrix.arch == 'aarch64' }}
-        uses: realthunder/run-on-arch-action@v2
-        id: emulate
-        with:
-            distro: ubuntu_latest
-            arch: aarch64
-            githubToken: ${{ github.token }}
-            install: |
-                apt-get -q update -y
-                apt-get -q install -y file wget gnupg2 desktop-file-utils libarchive-tools appstream \
-                libglib2.0-0 git binutils coreutils fuse patchelf squashfs-tools strace util-linux zsync
-                apt-get -q clean
-                installer=Mambaforge-Linux-${{ matrix.arch }}.sh
-                wget -q https://github.com/conda-forge/miniforge/releases/latest/download/$installer
-                chmod +x $installer
-                ./$installer -b -p /opt/conda
-                rm $installer
-
-                appimagetool=appimagetool-${{ matrix.arch }}.AppImage
-                wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/$appimagetool
-                chmod +x $appimagetool
-                # Trouble running on aarch64. See https://github.com/AppImage/AppImageKit/issues/1056
-                sed -i 's|AI\x02|\x00\x00\x00|' $appimagetool
-                ./$appimagetool --appimage-extract
-                mv squashfs-root /opt/appimagetool
-                rm $appimagetool
-                ln -s /opt/appimagetool/AppRun /usr/local/bin/appimagetool
-
-                # # repackage for testing purpose
-                # rm -rf /opt/appimagetool/usr/share/metainfo
-                # ARCH=aarch64 appimagetool /opt/appimagetool -u 'gh-releases-zsync|realthunder|FreeCADMakeImage|latest|*.AppImage.zsync' test.AppImage
-                # rm -rf test.AppImage*
-            setup: |
-                mkdir -p build
-                chmod 777 build
-            run: |
-                source /opt/conda/etc/profile.d/conda.sh
-                cd ${{ github.workspace }}
-                export GITHUB_ENV=github_env.txt
-                export CONDA_CMD=mamba
-                source conda/make-bundle.sh ${{ github.ref_name }} ${{ matrix.python-version }}
-
-      - name: Collect env output
-        if: ${{ matrix.arch == 'aarch64' }}
-        run:
-            cat build/github_env.txt >> $GITHUB_ENV
-
-      - name: Make bundle
-        id: make
-        if: ${{ matrix.arch == '64' }}
-        shell: bash -xl {0}
-        run: |
-            if ${{ startsWith(matrix.os, 'macos') }}; then
-                # plain conda on macos has hiccup on dependency solving
-                export CONDA_CMD=mamba
-            fi
-            # The command 'conda' is exposed as a bash function, which seems
-            # to be not accessible if calling from another script on Windows
-            # bash (Linux seems fine). So we try source our script (that calls
-            # 'conda') as a work around.
-            . conda/make-bundle.sh ${{ github.ref_name }} ${{ matrix.python-version }}
-
-      - name: Delete old release assets
-        uses: realthunder/delete-release-assets@v1
-        with:
-          fail-if-no-assets: false
-          fail-if-no-release: false
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ env.RELEASE_NAME }}
-          # repository: realthunder/FreeCAD
-          assets: |
-              ${{ env.RELEASE_ASSETS }}
-
-      - name: Upload release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: realthunder/action-gh-release@v1
-        with:
-          body_path: build/changelog.txt
-          files: build/out/*
-          name: ${{ env.RELEASE_NAME }}
-          prerelease: ${{ env.IS_PRERELEASE }}
-          tag_name: ${{ env.RELEASE_NAME }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+    uses: ./.github/workflows/worker.yaml
+    with:
+      os: ${{ matrix.os }}
+      arch: ${{ matrix.arch }}
+      python-version: ${{ matrix.python-version }}
+      ref: ${{ github.ref_name }}
