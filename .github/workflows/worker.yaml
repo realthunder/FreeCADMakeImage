@@ -94,10 +94,8 @@ jobs:
         if: ${{ inputs.arch == '64' }}
         shell: bash -xl {0}
         run: |
-            if ${{ startsWith(inputs.os, 'macos') }}; then
-                # plain conda on macos has hiccup on dependency solving
-                export CONDA_CMD=mamba
-            fi
+            # plain conda has hiccup on dependency solving
+            export CONDA_CMD=mamba
             # The command 'conda' is exposed as a bash function, which seems
             # to be not accessible if calling from another script on Windows
             # bash (Linux seems fine). So we try source our script (that calls
