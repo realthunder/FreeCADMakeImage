@@ -13,6 +13,7 @@ source:
 
 build:
   number: 5
+  # skip: true
 
 requirements:
   build:
@@ -23,15 +24,15 @@ requirements:
     - ninja
     - swig
   host:
-    - python 3.9
+    - python 3.10
     - coin3d
     - soqt
-    - qt 5.12
+    - qt 5.15
     - moab * mpi_mpich_tempest_*   # [osx]
   run:
-    - python 3.9
+    - python
     - coin3d
-    - qt 5.12
+    - qt
     - pyside2
     - soqt
     - moab * mpi_mpich_tempest_* # [osx]

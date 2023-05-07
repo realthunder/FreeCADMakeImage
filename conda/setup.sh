@@ -33,8 +33,8 @@ if [ "$conda_host" = "Windows" ]; then
         cat > $setup <<EOS
 call activate
 conda config --add channels conda-forge
-conda config --append channels freecad
-conda install conda-build -y
+conda config --append channels freecad freecad/label/dev
+conda install boa conda-build -y
 EOS
         pushd $conda_path/Scripts
         cmd.exe /c `win_path $setup`
@@ -50,8 +50,8 @@ else
         bash Miniconda3-latest-$conda_host-x86_64.sh -b -p ./$conda_path
         source $conda_path/etc/profile.d/conda.sh
         conda config --add channels conda-forge
-        conda config --append channels freecad
-        conda install conda-build -y
+        conda config --append channels freecad freecad/label/dev
+        conda install boa conda-build -y
     fi
 
     conda_host_ver=${FMK_CONDA_MAC_HOST_VER:="10.13"}
@@ -72,6 +72,7 @@ EOS
     if ! cmp -s conda_build_config.tmp conda_build_config.yaml; then
         cp conda_build_config.tmp conda_build_config.yaml
     fi
-    conda_cmd="conda build -e $PWD/conda_build_config.yaml "
+    test -z "$FMK_USE_MAMBA" || mamba=mamba
+    conda_cmd="conda ${mamba}build -e $PWD/conda_build_config.yaml "
 fi
 

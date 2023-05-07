@@ -21,7 +21,8 @@ source:
 
 build:
     number: {{ build }}
-    skip: true  # [win and py<35]
+    # skip: true
+    # skip: true  # [win and py<35]
 
 requirements:
     build:
@@ -34,13 +35,12 @@ requirements:
         - cmake 3.18.*
         - ninja
     host:
-        - boost-cpp
+        - boost-cpp 1.74
         - libglu  # [linux]
         - xorg-libxt  # [linux]
         - xorg-libxi  # [linux]
         - expat
     run:
-        - boost-cpp
         - libglu  # [linux]
         - xorg-libxt  # [linux]
         - xorg-libxi  # [linux]

@@ -4,24 +4,13 @@ set -ex
 
 tag=${1:-tip}
 py=${2:-3.10}
-changelog_file=${3:-../changelog.md}
 mkdir -p build
 cd build
 out=out
 mkdir -p $out
 conda_cmd=${CONDA_CMD:=conda}
 
-changelog=`sed -n "/-- $tag --/=" $changelog_file`
-if test -z $changelog; then
-    echo "Warning: no change log"
-    echo "Release $tag" > changelog.txt
-else
-    head -$((changelog - 1)) $changelog_file > changelog.txt
-    echo "Changelog:"
-    cat changelog.txt
-fi
-
-pkgs="python=*$py calculix blas=*=openblas git gitpython \
+pkgs="python=$py calculix blas=*=openblas git gitpython \
       matplotlib-base numpy sympy pandas gmsh scipy six qtpy \
       pyyaml pycollada \
       lxml xlutils olefile requests \

@@ -104,6 +104,9 @@ sudopass="$FMK_SUDOPASS"
 while test $1; do
     arg=$1
     case "$arg" in
+        mamba)
+            export FMK_USE_MAMBA=1
+            ;;
         remote=*)
             remote=${arg#*=}
             shift
@@ -223,6 +226,9 @@ aimg_branch=${FMK_AIMG_BRANCH:=master}
 aimg_recipe=${FMK_AIMG_RECIPE:=recipe-$dist.yml}
 
 date=${FMK_BUILD_DATE:=`date +%Y%m%d`}
+
+mamba=
+test -z "$FMK_USE_MAMBA" || mamba=mamba
 
 prepare_remote() {
     # copy Version.h header and make sure it works for local and remote build
@@ -478,6 +484,23 @@ if test $win; then
             sed -i -e "s|path: ../../repo|path: $(win_path2 $repo)|" ./recipes/freecad_asm3/meta.yaml
         fi
 
+        conda_bld_path=$PWD/env/conda-bld
+
+        # Windows often have glitches removing/renaming directory for some reason
+        for p in $conda_bld_path/*/_build_env*; do
+            while ! rm -rf $p; do
+                echo 'Retry removing $p'
+                sleep 20
+            done
+        done
+
+        for p in $conda_bld_path/*/_h_env*; do
+            while ! rm -rf $p; do
+                echo 'Retry removing $p'
+                sleep 20
+            done
+        done
+
         repo_path=`ls -t env/conda-bld/${FMK_FREECAD_PKGNAME}_*/work/CMakeLists.txt 2> /dev/null | head -1`
         if test "$repo_path" && test -f "$repo_path"; then
             repo_path=`dirname $repo_path`
@@ -493,7 +516,7 @@ if test $win; then
             fi
         fi
 
-        conda_cmd="conda build"
+        conda_cmd="conda ${mamba}build"
         if test -z $rebuild; then
             conda_cmd+=" --dirty "
         fi
@@ -501,7 +524,7 @@ if test $win; then
         if [ $build -ne 3 ]; then
             cat > build.bat << EOS
 call "${FMK_MSBUILD_PATH:=C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat}"
-call $(win_path $conda_path)\\condabin\\$conda_cmd --no-remove-work-dir --keep-old-work $(win_path ./recipes)
+call $(win_path $conda_path)\\condabin\\$conda_cmd --no-test --no-remove-work-dir --keep-old-work $(win_path ./recipes)
 EOS
             cmd.exe /c build.bat
         fi
@@ -510,7 +533,7 @@ EOS
             cd recipes
             mkdir $app_dir
             export FMK_BUILD_DATE=$date
-            ./install.sh $app_dir Windows ../$conda_path
+            ./install.sh $app_dir Windows $conda_bld_path ../$conda_path
             if test $FMK_BRANDING; then
                 branding/$FMK_BRANDING/install.sh branding/$FMK_BRANDING $app_dir
             fi
@@ -771,6 +794,7 @@ if [ $(uname) = 'Darwin' ]; then
         conda_path=env
         . ./recipes/setup.sh
 
+        conda_bld_path="$PWD/env/conda-bld"
         repo_path=`ls -t env/conda-bld/${FMK_FREECAD_PKGNAME}_*/work/CMakeLists.txt 2> /dev/null | head -1`
         if test "$repo_path" && test -f "$repo_path"; then
             repo_path=`dirname $repo_path`
@@ -799,15 +823,16 @@ if [ $(uname) = 'Darwin' ]; then
         fi
 
         if [ $build -ne 3 ]; then
-            $conda_cmd --no-remove-work-dir --keep-old-work ./recipes
+            $conda_cmd --no-test --no-remove-work-dir --keep-old-work ./recipes
         fi
         if [ $build -gt 0 ]; then
             app_path=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Conda-Py3-$date-x86_64
+
             cd recipes
-            cp -a MacBundle $app_path
+            cp -a MacBundle $app_path/FreeCAD.app
             base_path=$app_path/FreeCAD.app/Contents/Resources
             export FMK_BUILD_DATE=$date
-            ./install.sh $base_path
+            ./install.sh $base_path macos $conda_bld_path
             if test $FMK_BRANDING; then
                 branding/$FMK_BRANDING/install.sh branding/$FMK_BRANDING $base_path
             fi
@@ -818,7 +843,9 @@ if [ $(uname) = 'Darwin' ]; then
 
             # ver=$(conda run -p $base_path python get_freecad_version.py)
 
-            out=../../../out/$app_path
+            py_version=`$base_path/bin/python --version | cut -d' ' -f2 | cut -d. -f'1 2'`
+            image_name=${app_path/-Py3-/-Py$py_version-}
+            out=../../../out/$image_name
             rm -f $out.dmg
             hdiutil create -fs HFS+ -srcfolder $app_path $out.dmg
         fi
@@ -906,8 +933,11 @@ EOS
     # uninstall system include py-slvs. asm3 will prompt for installation when needed
     $base_path/MacOS/FreeCADCmd $INSTALL_PREFIX/pip.fcscript 'uninstall py-slvs -y' || true
 
+    py_version=$(echo $base_path/lib/python*)
+    py_version=${py_version#*python}
+
     # name=FreeCAD-`cat $INSTALL_PREFIX/VERSION`-OSX-x86_64-Qt5
-    name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Py3-$date-x86_64
+    name=FreeCAD-$img_name$img_postfix$FMK_IMG_POSTFIX-OSX-Py$py_version-$date-x86_64
     echo $name
     rm -f ../../../out/$name.dmg
     hdiutil create -fs HFS+ -srcfolder "$APP_PATH" ../../../out/$name.dmg
@@ -986,7 +1016,7 @@ EOS
 
     if [ $build -ne 3 ]; then
         echo 
-        cmd="conda build --no-remove-work-dir --keep-old-work --cache-dir ./cache "
+        cmd="conda ${mamba}build -c freecad/label/dev -c conda-forge --no-test --no-remove-work-dir --keep-old-work --cache-dir ./cache "
         if test -z $rebuild; then
             cmd+=" --dirty "
         fi
@@ -1009,7 +1039,7 @@ export FMK_FREECAD_PKGNAME=$FMK_FREECAD_PKGNAME
 rm -rf $appdir 
 mkdir -p $appdir/usr
 cp -a recipes/AppDir/* $appdir/
-recipes/install.sh $appdir/usr appimage
+recipes/install.sh $appdir/usr appimage /home/conda/conda-bld
 EOS
     fi
 

@@ -4,24 +4,38 @@ set -ex
 
 appdir=$1
 win=
+appimage=
+conda=conda
+test -z "$FMD_USE_MAMBA" || conda=mamba
+
 if [ "$2" = "Windows" ]; then
     app_path=`wslpath -wa $appdir`
-    conda_path=`wslpath -wa $3`
-    conda_cmd="cmd.exe /c call $conda_path\\condabin\\conda"
+    conda_bld_path=`wslpath -wa $3`
+    conda_path=`wslpath -wa $4`
+    conda_cmd="cmd.exe /c call $conda_path\\condabin\\$conda.bat"
     win=1
 else
-    conda_cmd=conda
     app_path=$appdir
-    appimage=$2
+    [ "$2" != appimage ] || appimage=1
+    conda_bld_path=$3
+    conda_cmd=$conda
 fi
 
 image_name=${FMK_CONDA_IMG_NAME:="FreeCAD-asm3-Conda_Py3Qt5_glibc2.12-x86_64"}
 
+local_pkgs="coin3d pivy $FMK_FREECAD_PKGNAME"
+if test $appimage; then
+    local_pkgs="$local_pkgs fcitx-qt5"
+fi
+# $conda_cmd install -p $app_path --use-local $local_pkgs -y
+
 if test "$FMK_CONDA_REQUIRMENTS" && test -f "$FMK_CONDA_REQUIRMENTS"; then
     $conda_cmd create \
         -p $app_path \
+        $local_pkgs \
         --file $FMK_CONDA_REQUIRMENTS \
         --no-default-packages \
+        -c $conda_bld_path
         -c freecad/label/dev \
         -c freecad \
         -c conda-forge \
@@ -29,28 +43,24 @@ if test "$FMK_CONDA_REQUIRMENTS" && test -f "$FMK_CONDA_REQUIRMENTS"; then
 else
     appimage_updater=
     if test $appimage; then
-        appimage_updater=appimage-updater-bridge
+        appimage_updater="appimage-updater-bridge=2.0.2"
     fi
     $conda_cmd create \
         -p $app_path \
-        python qt=5.12 occt=7.5 vtk=9 calculix blas=*=openblas git gitpython \
+        $local_pkgs \
+        python qt=5.15.4 occt vtk calculix blas=*=openblas git gitpython \
         opencamlib matplotlib-base numpy sympy pandas $appimage_updater \
-        gmsh netgen scipy pythonocc-core six \
-        pyyaml ifcopenshell boost-cpp libredwg pycollada \
-        lxml xlutils olefile requests openglider \
+        gmsh scipy six qtpy \
+        pyyaml ifcopenshell=v0.7 boost-cpp libredwg pycollada \
+        lxml xlutils olefile requests \
         blinker opencv qt.py nine docutils jupyter notebook \
         --copy \
+        -c $conda_bld_path \
         -c freecad/label/dev \
         -c conda-forge \
+        --override-channels \
         -y
 fi
-
-local_pkgs="coin3d pivy $FMK_FREECAD_PKGNAME"
-if test $appimage; then
-    local_pkgs="$local_pkgs fcitx-qt5"
-fi
-
-$conda_cmd install -p $app_path --use-local $local_pkgs -y
 
 if test "$FMK_CONDA_FC_EXTRA"; then
     cp -a "$FMK_CONDA_FC_EXTRA"/* $appdir
@@ -61,10 +71,12 @@ fi
 
 jupyter_dir=$appdir/share/jupyter/kernels
 if test -d $jupyter_dir; then
-    $conda_cmd run -p $app_path pip install git+https://github.com/realthunder/freecad_jupyter
-    rm -rf $jupyter_dir/*
-    mkdir -p $jupyter_dir/freecad
-    cat > $jupyter_dir/freecad/kernel.json <<EOS
+    if ! $conda_cmd run -p $app_path pip install git+https://github.com/realthunder/freecad_jupyter; then
+        echo Failed to install jupyter
+    else
+        rm -rf $jupyter_dir/*
+        mkdir -p $jupyter_dir/freecad
+        cat > $jupyter_dir/freecad/kernel.json <<EOS
 {
     "argv": [
     "python",
@@ -77,18 +89,19 @@ if test -d $jupyter_dir; then
     "language": "python"
 }
 EOS
-    py3kernel=$jupyter_dir/python3/kernel.json
-    if test -f $py3kernel; then
-        sed -i -e '1s|././././././././././././/../bin/python|python|' $py3kernel
+        py3kernel=$jupyter_dir/python3/kernel.json
+        if test -f $py3kernel; then
+            sed -i -e '1s|././././././././././././/../bin/python|python|' $py3kernel
+        fi
     fi
 fi
 
 # conda run -p $appdir python -m compileall $appdir/usr/lib/python$py_ver $appdir/usr/Mod
 
 # uninstall some packages not needed
-$conda_cmd uninstall -p $app_path gtk2 gdk-pixbuf llvm-tools \
-                           llvmdev clangdev clang clang-tools \
-                           clangxx libclang libllvm10 --force -y
+# $conda_cmd uninstall -p $app_path gtk2 gdk-pixbuf llvm-tools \
+#                            llvmdev clangdev clang clang-tools \
+#                            clangxx libclang libllvm10 --force -y
 
 $conda_cmd list -e -p $app_path > $appdir/packages.txt
 

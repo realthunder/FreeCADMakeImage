@@ -68,7 +68,7 @@ jobs:
             echo "Warning: no change log"
             echo "changelog='Release ${{ inputs.ref }}'" >> "$GITHUB_OUTPUT"
           else
-            EOF=EOF${{ inputs.os }}${ inputs.arch }}${{ inputs.python-version }}${{ inputs.ref }}
+            EOF=EOF${{ inputs.os }}${{ inputs.arch }}${{ inputs.python-version }}${{ inputs.ref }}
             echo "changelog<<$EOF" >> "$GITHUB_OUTPUT"
             head -$((changelog - 1)) repo/ChangeLog.md >> "$GITHUB_OUTPUT"
             echo "$EOF" >> "$GITHUB_OUTPUT"
