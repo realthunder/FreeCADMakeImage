@@ -1,9 +1,23 @@
+@echo on
+
+if "%GIT_DESCRIBE_TAG:~-6%"=="stable" (
+    set ICON=icon.ico
+) else (
+    set ICON=icon-daily.ico
+)
+
+if exist "%RECIPE_DIR%\extra\%ICON%" (copy /y "%RECIPE_DIR%\extra\%ICON%" src\Main\icon.ico)
+
 mkdir build
 cd build
 
 set "CFLAGS= "
 set "CXXFLAGS= "
 set "LDFLAGS_SHARED= ucrt.lib"
+
+REM remove Chocolatey/bin from search path to hide ccache, as it cause resouce compilation failure
+set PATH=%PATH:C:\ProgramData\Chocolatey\bin;=%
+echo "modified path: %PATH%"
 
 cmake -G "Ninja" ^
       -D BUID_WITH_CONDA:BOOL=ON ^
@@ -15,8 +29,6 @@ cmake -G "Ninja" ^
       -D CMAKE_LIBRARY_PATH:FILEPATH=%LIBRARY_PREFIX%/lib ^
       -D CMAKE_INSTALL_LIBDIR:FILEPATH=%LIBRARY_PREFIX%/lib ^
       -D BUILD_QT5:BOOL=ON ^
-      -D NETGENDATA:FILEPATH=%LIBRARY_PREFIX%/include/netgen ^
-      -D NGLIB_INCLUDE_DIR:FILEPATH=%LIBRARY_PREFIX%/include/netgen ^
       -D BUILD_FEM_NETGEN:BOOL=ON ^
       -D OCC_INCLUDE_DIR:FILEPATH=%LIBRARY_PREFIX%/include/opencascade ^
       -D OCC_LIBRARY_DIR:FILEPATH=%LIBRARY_PREFIX%/lib ^
@@ -30,9 +42,9 @@ cmake -G "Ninja" ^
       -D USE_BOOST_PYTHON:BOOL=OFF ^
       -D FREECAD_USE_PYBIND11:BOOL=ON ^
       -D SMESH_INCLUDE_DIR:FILEPATH=%LIBRARY_PREFIX%/include/smesh ^
+      -D SMESH_LIBRARY:FILEPATH="%LIBRARY_PREFIX%/lib/SMESH.lib" ^
       -D FREECAD_USE_EXTERNAL_SMESH:BOOL=ON ^
       -D BUILD_FLAT_MESH:BOOL=ON ^
-      -D BUILD_PLOT:BOOL=OFF ^
       -D BUILD_SHIP:BOOL=OFF ^
       -D OCCT_CMAKE_FALLBACK:BOOL=ON ^
       -D BUILD_DYNAMIC_LINK_PYTHON:BOOL=ON ^
@@ -41,6 +53,7 @@ cmake -G "Ninja" ^
       -D FREECAD_USE_PCL:BOOL=ON ^
       -D INSTALL_TO_SITEPACKAGES:BOOL=ON ^
       -D LZMA_LIBRARY="%LIBRARY_PREFIX%/lib/liblzma.lib" ^
+      -D BUILD_TEST:BOOL=OFF ^
       ..
 
 if errorlevel 1 exit 1

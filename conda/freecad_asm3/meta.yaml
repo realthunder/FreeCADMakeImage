@@ -1,20 +1,21 @@
-{% set name = "freecad-asm3" %}
-{% set version = "0.20" %}
+{% set name = "freecad-rt" %}
 
 package:
   name: {{ name }}
-  version: {{ version }}
+  version: {{ environ['GIT_DESCRIBE_TAG'] }}
 
 source:
-  path: ../../repo
+  git_url : https://github.com/realthunder/FreeCAD.git
+  git_rev : LinkDaily
 
 build:
-  number: 1
-  skip: true  # [py<37]
+  number: 4
 
 requirements:
   run_constrained:
-    - moab * mpi_mpich_tempest*
+    - moab * mpi_openmpi_tempest* # [not osx]
+    - moab * mpi_mpich_tempest* # [osx]
+    - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.12") }}  # [osx]
   build:
     - {{ compiler("cxx") }}
     - {{ cdt('mesa-libgl-devel') }}      # [linux]
@@ -33,80 +34,69 @@ requirements:
     - ninja
     - git
     - sed  # [unix]
+    - python                                 # [build_platform != target_platform]
+    - cross-python_{{ target_platform }}     # [build_platform != target_platform]
+    - qt-main                                # [build_platform != target_platform]
   host:
     - boost-cpp
-    - python 3.9
-    - qt 5.12
+    - python
+    - qt-main
+    - qt-webengine
     - occt
     - xerces-c
     - zlib
     - vtk
-    - netgen
-    - swig
     - eigen
     - pybind11
-    - coin3d
-    - pivy
+    - coin3d-rt
+    - pivy-rt
     - pyside2
-    - smesh >=9.7
-    - doxygen
-    - hdf5
+    - smesh ==9.9
+    - hdf5 
     - freetype
     - libspnav  # [linux]
     - pcl
     - six
     - ply
-    - matplotlib
   run:
+    - python
+    - qt-main
+    - qt-webengine
+    - occt
     - pyside2
     - vtk
-    - occt
-    - qt 5.12
     - xerces-c
     - zlib
     - boost-cpp
     - hdf5
-    - python 3.9
-    - coin3d
-    - pivy
-    - {{ pin_compatible('smesh', max_pin='x.x.x') }}
+    - coin3d-rt
+    - pivy-rt
     - freetype
     - numpy
     - six
     - future
     - pyyaml
     - libspnav  # [linux]
+    - {{ pin_compatible('smesh', max_pin='x.x.x') }}
     - pcl
     - ply
     - gmsh
     - graphviz
-    - opencamlib
+    - matplotlib
 
-test:
-  commands:
-    # - FreeCADCmd -t 0
-    - FreeCADCmd --version
+# test:
+#   commands:
+#     # - FreeCADCmd -t 0
+#     - FreeCADCmd --version
 
 about:
-  home: https://www.freecadweb.org/
+  home: https://github.com/realthunder/FreeCAD
   license: LGPL2
   license_family: LGPL
   license_file: LICENSE
-  summary: 'FreeCAD is a parametric 3D modeler made primarily to design real-life objects of any size. '
+  summary: 'FreeCAD Link Branch'
   description: |
-    FreeCAD is a general purpose feature-based, parametric 3D modeler for
-    CAD, MCAD, CAx, CAE and PLM, aimed directly at mechanical engineering
-    and product design but also fits a wider range of uses in engineering,
-    such as architecture or other engineering specialties. It is 100% Open
-    Source (LGPL2+ license) and extremely modular, allowing for very
-    advanced extension and customization.
-    FreeCAD is based on OpenCASCADE, a powerful geometry kernel, features an
-    Open Inventor-compliant 3D scene representation model provided by the
-    Coin 3D library, and a broad Python API. The interface is built with Qt.
-    FreeCAD runs exactly the same way on Windows, Mac OSX, BSD and Linux
-    platforms.
-    doc_url: https://www.freecadweb.org/wiki/Main_Page
-    dev_url: https://github.com/FreeCAD/FreeCAD
+    FreeCAD Link Branch with various enhancement
 
 extra:
   recipe-maintainers:
