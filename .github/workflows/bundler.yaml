@@ -116,7 +116,7 @@ jobs:
       - name: Upload release
         uses: realthunder/action-gh-release@v1
         with:
-          body: ${{ input.changelog }}
+          body: ${{ inputs.changelog }}
           files: build/out/*
           name: ${{ env.RELEASE_NAME }}
           prerelease: ${{ env.IS_PRERELEASE }}
