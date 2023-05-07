@@ -45,11 +45,10 @@ jobs:
           auto-update-conda: false
           auto-activate-base: false
           show-channel-urls: true
-          # use-mamba: true
-          # miniforge-variant: Mambaforge
-      # - name: Install mamba build
-      #   shell: bash -el {0}
-      #   run: mamba install boa -c conda-forge
+          miniforge-variant: Mambaforge
+      - name: Install mamba build
+        shell: bash -el {0}
+        run: mamba install boa -c conda-forge
       - name: Set build variant
         id: setup
         shell: bash -xel {0}
@@ -79,7 +78,7 @@ jobs:
         uses: realthunder/action-build-and-upload-conda-packages@main
         with:
           meta_yaml_dir: conda/freecad_asm3
-          # mambabuild: true
+          mambabuild: true
           python-version: ${{ inputs.python-version }}
           variant_conf: conda/freecad_asm3/variant.yaml
           user: realthunder
