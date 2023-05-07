@@ -50,7 +50,7 @@ requirements:
     - coin3d-rt
     - pivy-rt
     - pyside2
-    - smesh == 9.9
+    - smesh ==9.9
     - hdf5 
     - freetype
     - libspnav  # [linux]
