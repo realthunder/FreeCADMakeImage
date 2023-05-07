@@ -5,11 +5,10 @@ package:
   version: {{ environ['GIT_DESCRIBE_TAG'] }}
 
 source:
-  git_url : https://github.com/realthunder/FreeCAD.git
-  git_rev : LinkDaily
+  git_url : ../../repo
 
 build:
-  number: 4
+  number: 1
 
 requirements:
   run_constrained:

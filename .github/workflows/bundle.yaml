@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  make_bundle:
+  make:
     strategy:
       fail-fast: false
       matrix:
@@ -22,9 +22,15 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.10"
             arch: "aarch64"
-    uses: ./.github/workflows/worker.yaml
+          - os: macos-11
+            arch: arm64
+            python-version: "3.10"
+
+    uses: ./.github/workflows/builder.yaml
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
       python-version: ${{ matrix.python-version }}
       ref: ${{ github.ref_name }}
+    secrets:
+      token: ${{ secrets.ANACONDA_TOKEN }}

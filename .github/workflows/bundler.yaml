@@ -1,4 +1,4 @@
-name: Make bundle
+name: Bundle maker
 
 on:
   workflow_call:
@@ -82,7 +82,7 @@ jobs:
                 cd ${{ github.workspace }}
                 export GITHUB_ENV=github_env.txt
                 export CONDA_CMD=mamba
-                source conda/make-bundle.sh ${{ inputs.ref }} ${{ inputs.python-version }} ${{ inputs.changelog }}
+                source conda/make-bundle.sh ${{ inputs.ref }} ${{ inputs.python-version }}
 
       - name: Collect env output
         if: ${{ inputs.arch == 'aarch64' }}
@@ -100,7 +100,7 @@ jobs:
             # to be not accessible if calling from another script on Windows
             # bash (Linux seems fine). So we try source our script (that calls
             # 'conda') as a work around.
-            . conda/make-bundle.sh ${{ inputs.ref }} ${{ inputs.python-version }} ${{ inputs.changelog }}
+            . conda/make-bundle.sh ${{ inputs.ref }} ${{ inputs.python-version }}
 
       - name: Delete old release assets
         uses: realthunder/delete-release-assets@v1
@@ -116,7 +116,7 @@ jobs:
       - name: Upload release
         uses: realthunder/action-gh-release@v1
         with:
-          body_path: build/changelog.txt
+          body: ${{ input.changelog }}
           files: build/out/*
           name: ${{ env.RELEASE_NAME }}
           prerelease: ${{ env.IS_PRERELEASE }}
