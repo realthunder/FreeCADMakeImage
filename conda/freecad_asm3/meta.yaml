@@ -41,8 +41,7 @@ requirements:
     - python
     - qt-main
     - qt-webengine
-    - occt == 7.6 # [linux]
-    - occt  # [not linux]
+    - occt 
     - xerces-c
     - zlib
     - vtk
@@ -62,8 +61,7 @@ requirements:
     - python
     - qt-main
     - qt-webengine
-    - occt == 7.6 # [linux]
-    - occt  # [not linux]
+    - occt
     - pyside2
     - vtk
     - xerces-c
