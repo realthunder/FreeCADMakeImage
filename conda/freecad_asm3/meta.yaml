@@ -8,7 +8,7 @@ source:
   git_url : ../../repo
 
 build:
-  number: 1
+  number: 2
 
 requirements:
   run_constrained:
@@ -41,7 +41,8 @@ requirements:
     - python
     - qt-main
     - qt-webengine
-    - occt
+    - occt == 7.6 # [linux]
+    - occt  # [not linux]
     - xerces-c
     - zlib
     - vtk
@@ -50,7 +51,7 @@ requirements:
     - coin3d-rt
     - pivy-rt
     - pyside2
-    - smesh ==9.9
+    - smesh == 9.9
     - hdf5 
     - freetype
     - libspnav  # [linux]
@@ -61,7 +62,8 @@ requirements:
     - python
     - qt-main
     - qt-webengine
-    - occt
+    - occt == 7.6 # [linux]
+    - occt  # [not linux]
     - pyside2
     - vtk
     - xerces-c
