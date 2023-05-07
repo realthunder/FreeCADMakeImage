@@ -1,11 +1,14 @@
-name: Make bundle
+name: Make conda bundle
 
 on:
-  push:
-    tags:
-      - "*"
-
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
 
 jobs:
   make:
@@ -13,24 +16,24 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-11, ubuntu-latest, windows-latest]
-        python-version: ["3.10"]
+        python-version: ["3.11"]
         arch : ["64"]
         include:
           - os: windows-latest
             python-version: "3.8"
             arch: "64"
           - os: ubuntu-latest
-            python-version: "3.10"
+            python-version: "3.11"
             arch: "aarch64"
           - os: macos-11
             arch: arm64
-            python-version: "3.10"
+            python-version: "3.11"
 
     uses: ./.github/workflows/builder.yaml
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
       python-version: ${{ matrix.python-version }}
-      ref: ${{ github.ref_name }}
+      ref: ${{ inputs.ref }}
     secrets:
-      token: ${{ secrets.ANACONDA_TOKEN }}
+      token: ${{ secrets.token }}
