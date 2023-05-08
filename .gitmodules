@@ -1,3 +1,3 @@
 [submodule "conda/branding"]
 	path = conda/branding
-	url = git@github.com:realthunder/fcad-branding.git
+	url = https://github.com/realthunder/fcad-branding.git
