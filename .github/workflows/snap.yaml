@@ -20,26 +20,83 @@ jobs:
         repository: realthunder/FreeCADMakeImage
     - name: setup build tag
       run: |
-          sed -i 's|source-branch: LinkDaily|source-tag: ${{ inputs.ref }}|' snap/snapcraft.yaml
+        sed -i 's|source-branch: LinkDaily|source-tag: ${{ inputs.ref }}|' snap/snapcraft.yaml
+
     - name: git permission workaround
       run: |
         sudo git config --global --add safe.directory "$GITHUB_WORKSPACE"
         sudo git config --global --add safe.directory /home/runner/work/FreeCAD/FreeCAD/parts/freecad/src
+
     - name: install snapcraft
       run: sudo snap install snapcraft --classic
     # build in destructive mode because building in LXD is way too slow 
     # due to the kde-neon SDK snap being mounted via fuse
+
     - name: build snap 
       run: |
-          sudo snapcraft --destructive-mode
-          sudo rm -rf $HOME/.config/snapcraft
-    - name: upload snap
+        sudo snapcraft --destructive-mode
+        sudo rm -rf $HOME/.config/snapcraft
+
+    - name: collect assets
+      run: |
+        set -x
+        tag=${{ inputs.ref }}
+        case $tag in
+        *tip)
+            echo "RELEASE_NAME=Tip" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+            release=Tip
+            tag=${tag%tip}
+            ;;
+        *edge)
+            echo "RELEASE_NAME=Edge" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+            release=Edge
+            tag=${tag%edge}
+            ;;
+        *stable)
+            echo "RELEASE_NAME=$tag" >> $GITHUB_ENV
+            echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+            release=Stable
+            tag=${tag%stable}
+            ;;
+        *)
+            echo "Invalid tag"
+            exit 1
+        esac
+        asset=FreeCAD-Link-$release-Snap-X86_64
+        name=$asset-$tag.snap
+        ln -s freecad-realthunder*.snap $name
+        shasum -a 256 $name > $name-SHA256.txt
+        echo "RELEASE_ASSETS=$asset" >> $GITHUB_ENV
+
+    - name: Delete old release assets
+      if: ${{ env.RELEASE_NAME }}
+      uses: realthunder/delete-release-assets@v1
+      with:
+        fail-if-no-assets: false
+        fail-if-no-release: false
+        token: ${{ github.token }}
+        tag: ${{ env.RELEASE_NAME }}
+        assets: ${{ env.RELEASE_ASSETS }}*
+
+    - name: Upload release
+      if: ${{ env.RELEASE_NAME }}
+      uses: realthunder/action-gh-release@v1
+      with:
+        files: ${{ env.RELEASE_ASSETS }}*
+        name: ${{ env.RELEASE_NAME }}
+        prerelease: ${{ env.IS_PRERELEASE }}
+        tag_name: ${{ env.RELEASE_NAME }}
+        token: ${{ github.token }}
+
+    - name: Upload snap
       env:
         SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.token }}
       run: |
-        if endsWith(inputs.ref, 'edge'); then
+        if ${{ endsWith(inputs.ref, 'edge') }}; then
           release_to="edge"
-        elif endsWith(inputs.ref, 'tip'); then
+        elif ${{ endsWith(inputs.ref, 'tip') }}; then
           release_to="beta"
         fi
         snapcraft upload --release=${release_to} freecad-realthunder*.snap
