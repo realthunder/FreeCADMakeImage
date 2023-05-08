@@ -29,7 +29,8 @@ arm64)
 esac
 
 if [ $arch != aarch64 ]; then
-    pkgs="$pkgs libredwg ifcopenshell opencamlib"
+    # pkgs="$pkgs libredwg ifcopenshell opencamlib"
+    pkgs="$pkgs ifcopenshell opencamlib"
 fi
 
 os=`uname`
