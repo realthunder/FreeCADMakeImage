@@ -103,6 +103,7 @@ jobs:
             . conda/make-bundle.sh ${{ inputs.ref }} ${{ inputs.python-version }}
 
       - name: Delete old release assets
+        if: ${{ env.RELEASE_NAME }}
         uses: realthunder/delete-release-assets@v1
         with:
           fail-if-no-assets: false
@@ -114,6 +115,7 @@ jobs:
               ${{ env.RELEASE_ASSETS }}
 
       - name: Upload release
+        if: ${{ env.RELEASE_NAME }}
         uses: realthunder/action-gh-release@v1
         with:
           body: ${{ inputs.changelog }}
