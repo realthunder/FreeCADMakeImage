@@ -1,0 +1,323 @@
+name: freecad-realthunder
+base: core20
+adopt-info: freecad
+summary: An open source parametric 3D CAD modeler (realthunder's version)
+description: |
+  FreeCAD is a parametric 3D modeler. Parametric modeling
+  allows you to easily modify your design by going back into
+  your model history and changing its parameters. FreeCAD is
+  open source (LGPL license) and completely modular, allowing
+  for very advanced extension and customization.
+
+  FreeCAD is multiplatfom, and reads and writes many open
+  file formats such as STEP, IGES, STL and others.
+
+  This snap packages the FreeCAD fork of realthunder 
+  (https://github.com/realthunder/FreeCAD/) + the Assembly3 workbench
+  (https://github.com/realthunder/FreeCAD_assembly3).
+
+  Do _not_ complain to upstream about issues with this snap!
+
+  Commands:
+    freecad-realthunder:      Run FreeCAD
+    freecad-realthunder.cmd:  Run FreeCAD command line interface
+    freecad-realthunder.pip:  Install python packages for user (not system-wide). 
+
+grade: devel
+confinement: strict
+compression: lzo
+license: LGPL-2.0-or-later
+assumes: [snapd2.55.3] # for cups interface & private shared memory
+
+layout:
+  /usr/share/libdrm/amdgpu.ids:
+    symlink: $SNAP/kf5/usr/share/libdrm/amdgpu.ids
+  /usr/share/openmpi:
+    symlink: $SNAP/usr/share/openmpi
+  /etc/openmpi:
+    bind: $SNAP/etc/openmpi
+  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/openmpi:
+    bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/openmpi
+  /usr/bin/orted:
+    symlink: $SNAP/usr/bin/orted
+  /usr/share/pmix:
+    symlink: $SNAP/usr/share/pmix
+  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/pmix:
+    symlink: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/pmix
+  /etc/matplotlibrc:
+    bind-file: $SNAP/etc/matplotlibrc
+  /usr/share/matplotlib:
+    symlink: $SNAP/usr/share/matplotlib
+  /usr/share/qt5:
+    symlink: $SNAP/kf5/usr/share/qt5
+  /usr/bin/dot: # Graphviz for dependency graph
+    symlink: $SNAP/usr/bin/dot
+  /usr/bin/unflatten: # Graphviz for dependency graph
+    symlink: $SNAP/usr/bin/unflatten
+  /usr/share/povray-3.7: # Raytracing
+    symlink: $SNAP/usr/share/povray-3.7
+    
+plugs:
+  # this is not used or needed for anything other than to trigger automatic
+  # installation of the cups snap via "default-provider: cups"
+  foo-install-cups:
+    interface: content
+    content: foo
+    default-provider: cups
+    target: $SNAP_DATA/foo
+  # Necessary to enable semaphores for numba, OpenMP etc.
+  shared-memory:
+    private: true
+
+environment:
+  LD_LIBRARY_PATH: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/blas:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/lapack # numpy
+  LD_PRELOAD: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/libstubchown.so
+  FREECAD_USER_HOME: $SNAP_USER_COMMON
+  GIT_EXEC_PATH: $SNAP/usr/lib/git-core
+  GIT_TEMPLATE_DIR: $SNAP/usr/share/git-core/templates
+  GIT_CONFIG_NOSYSTEM: 1
+  ELMER_HOME: $SNAP/usr
+  QTWEBENGINE_DISABLE_SANDBOX: 1
+  PYTHONPYCACHEPREFIX: $SNAP_USER_COMMON/.pycache
+  PYTHONUSERBASE: $SNAP_USER_COMMON/.local
+  PIP_USER: 1
+  PYTHONPATH: &pypath $PYTHONUSERBASE/lib/python3.8/site-packages:$SNAP/lib/python3.8/site-packages:$SNAP/usr/lib/python3/dist-packages
+  SNAP_PYTHONPATH: *pypath
+  QT_QPA_PLATFORM: xcb # Coin3D cannot run on Wayland
+  POVINI: $SNAP/etc/povray/3.7/povray.ini # Raytracing
+
+apps:
+  freecad-realthunder:
+    command: usr/bin/FreeCADLink
+    extensions: [kde-neon]
+    common-id: org.freecadweb.FreeCAD.Link.Snap.desktop
+    desktop: usr/share/applications/org.freecadweb.FreeCAD.Link.Snap.desktop
+    plugs: &plugs
+      - home
+      - opengl
+      - removable-media
+      - gsettings
+      - network      
+      - browser-support
+      - unity7
+      - cups
+      - shared-memory
+  cmd:
+    command: usr/bin/FreeCADCmd
+    extensions: [kde-neon]
+    plugs: *plugs
+  pip:
+    command: bin/pip
+    plugs: *plugs
+
+package-repositories:
+  - type: apt
+    ppa: elmer-csc-ubuntu/elmer-csc-ppa
+  - type: apt
+    ppa: openscad/releases
+  - type: apt
+    components:
+      - main
+    suites:
+      - focal
+    key-id: 444DABCF3667D0283F894EDDE6D4736255751E5D
+    url: http://origin.archive.neon.kde.org/user
+    key-server: keyserver.ubuntu.com
+
+parts:
+  stub-chown:
+    plugin: meson
+    source: snap/local/stub-chown
+    meson-parameters:
+      - --prefix=/usr
+
+  snap-setup-mod:
+    plugin: dump
+    source: snap/local/snap-setup-mod
+    organize:
+      "*": usr/Mod/SnapSetup/
+
+  freecad:
+    plugin: cmake
+    source: https://github.com/realthunder/FreeCAD.git
+    source-branch: LinkDaily
+    cmake-parameters:
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_QT5=ON
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DPYTHON_EXECUTABLE=/usr/bin/python3
+      - -DPYTHON_INCLUDE_DIR=/usr/include/python3.8
+      - -DPYTHON_LIBRARY=/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/libpython3.8.so
+      - -DFREECAD_USE_EXTERNAL_ZIPIOS=ON
+      - -DFREECAD_USE_PYBIND11=ON
+      - -DFREECAD_FORCE_USE_QT_FILEDIALOG=ON
+      - -DBUILD_FLAT_MESH=ON
+    build-snaps:
+      - freecad-deps-core20
+      - coin3d-realthunder
+    stage-snaps:
+      - freecad-deps-core20
+      - coin3d-realthunder
+    build-packages:
+      - g++
+      - git
+      - libboost-all-dev
+      - libsimage-dev # optional
+      - libspnav-dev # optional
+      - libeigen3-dev
+      - libgts-bin
+      - libgts-dev
+      - libkdtree++-dev
+      - libmedc-dev
+      - libopencv-dev
+      - libproj-dev
+      - libx11-dev
+      - libxerces-c-dev
+      - libzipios++-dev
+      - swig
+      - python3-dev
+      - libvtk7-dev
+      - libpyside2-dev
+      - libshiboken2-dev
+      - pybind11-dev
+      - libfreeimage-dev
+    stage-packages:
+      - libaec0
+      - libboost-filesystem1.71.0
+      - libboost-program-options1.71.0
+      - libboost-python1.71.0
+      - libboost-regex1.71.0
+      - libboost-system1.71.0
+      - libboost-thread1.71.0
+      - libboost-date-time1.71.0 
+      - libhdf5-openmpi-103
+      - libhwloc15
+      - libilmbase24
+      - libjxr0
+      - libmedc11
+      - libmed11
+      - libopenexr24
+      - libopenmpi3
+      - libpsm-infinipath1
+      - libpython3.8
+      - libpython3.8-minimal
+      - libpython3.8-stdlib
+      - libraw19
+      - libspnav0
+      - libsz2
+      - libxerces-c3.2
+      - libzipios++0v5
+      - python3-tk # FEM
+      - python3-yaml # FEM
+      - python3-numba # FEM (fcFEM)
+      - python3-scipy # FEM
+      - python3-numpy
+      - python3-matplotlib
+      - python3-six
+      - python3-pyparsing
+      - python3-setuptools-scm
+      - python3-cycler
+      - python3-dateutil
+      - python3-git
+      - python3-ply # OpenSCAD
+      - python3-markdown # Addon manager
+      - python3-pyside2.qtcore
+      - python3-pyside2.qtgui
+      - python3-pyside2.qtsvg
+      - python3-pyside2.qtwidgets
+      - python3-pyside2.qtnetwork
+      - python3-pyside2.qtuitools
+      - python3-qtpy # Nodes addon
+      - calculix-ccx # FEM
+      - libfreeimage3
+      - libtbb2
+      - libvtk7.1p
+      - elmerfem-csc # FEM
+      - openscad  # OpenSCAD
+      - povray # Raytracing
+      - povray-includes # Raytracing
+    override-build: |
+      kde_sdk_dir="/snap/kde-frameworks-5-99-qt-5-15-7-core20-sdk/current"
+      mkdir -p "/snap/kde-frameworks-5-96-qt-5-15-5-core20-sdk"
+      # qtchooser wrapper scripts in 5-99 release seem broken and hard code path to 5-96 directory causing build failure
+      ln -s "/snap/kde-frameworks-5-99-qt-5-15-7-core20-sdk/9" "/snap/kde-frameworks-5-96-qt-5-15-5-core20-sdk/current"
+      mkdir -p /etc/xdg/qtchooser
+      cp "$kde_sdk_dir/etc/xdg/qtchooser/default.conf" "/etc/xdg/qtchooser/default.conf"
+      mkdir -p /workspace/usr/bin
+      ln -s /usr/bin/shiboken2 /workspace/usr/bin/shiboken2
+      snapcraftctl build
+      cd $SNAPCRAFT_PART_SRC
+      iso_date=$(date -I)
+      git_hash=$(git rev-parse --short=8 HEAD)
+      version="$iso_date-g$git_hash"
+      snapcraftctl set-version "$version"
+
+  branding:
+    after: [freecad]
+    plugin: nil
+    source: https://github.com/realthunder/fcad-branding.git
+    override-prime: |
+      export FMK_BUILD_DATE=$(date +%Y%m%d)
+      export FMK_DESKTOP_ID_POSTFIX=".Snap"
+      branding_path=$SNAPCRAFT_PART_SRC/asm3-snap
+      $branding_path/install.sh $branding_path $SNAPCRAFT_PRIME/usr
+      sed -i -E \
+        "s|^Icon=(.*)|Icon=\${SNAP}/usr/share/icons/hicolor/scalable/apps/org.freecadweb.FreeCAD.Link.Snap.svg|g" \
+        $SNAPCRAFT_PRIME/usr/share/applications/org.freecadweb.FreeCAD.Link.Snap.desktop
+      
+  assembly3:
+    plugin: dump
+    source: https://github.com/realthunder/FreeCAD_assembly3.git
+    organize:
+      "*": usr/Mod/Assembly3/
+
+  python-packages:
+    plugin: python
+    build-packages:
+      - libsuitesparse-dev
+    stage-packages:
+      - python3-distutils # pip
+      - libamd2 # scikit-sparse
+      - libcamd2 # scikit-sparse
+      - libccolamd2 # scikit-sparse
+      - libcholmod3 # scikit-sparse
+      - libcolamd2 # scikit-sparse
+      - libsuitesparseconfig5 # scikit-sparse
+    python-packages:
+      - pip
+      - scikit-sparse
+    stage:
+      - -pyvenv.cfg
+      - -lib/python3.8/site-packages/scipy*
+      - -lib/python3.8/site-packages/numpy*
+
+  graphviz:
+    plugin: nil
+    build-packages:
+      - graphviz
+    stage-packages:
+      - graphviz
+    override-build: |
+      dot -c
+      cp \
+        /usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/graphviz/config* \
+        ${SNAPCRAFT_PART_INSTALL}/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/graphviz/
+
+  cleanup:
+    after: [stub-chown, freecad, python-packages, assembly3, snap-setup-mod, graphviz, branding]
+    plugin: nil
+    build-snaps: [kde-frameworks-5-99-qt-5-15-7-core20]
+    override-prime: |
+      set -eux
+      for snap in "kde-frameworks-5-99-qt-5-15-7-core20"; do  # List all content-snaps you're using here
+        cd "/snap/$snap/current" && find . -type f,l -exec rm -f "$SNAPCRAFT_PRIME/{}" "$SNAPCRAFT_PRIME/usr/{}" \;
+      done
+      for cruft in bug lintian man; do
+        rm -rf $SNAPCRAFT_PRIME/usr/share/$cruft
+      done
+      find $SNAPCRAFT_PRIME/usr/share/doc/ -type f -not -name 'copyright' -delete
+      find $SNAPCRAFT_PRIME/usr/share -type d -empty -delete
+      find $SNAPCRAFT_PRIME/usr/lib -type f,l \
+        -name 'libQt*.so*' `# remove all Qt libs pulled in from Ubuntu repos` \
+        -not -name 'libQt5Gamepad.so*' -delete `# for OpenSCAD`

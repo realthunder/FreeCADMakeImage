@@ -1,0 +1,42 @@
+name: Publish snap
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+
+jobs:
+  publish_amd64:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: setup build tag
+      run: |
+          sed -i 's|source-branch: LinkDaily|source-tag: ${{ inputs.ref }}|' snap/snapcraft.yaml
+    - name: git permission workaround
+      run: |
+        sudo git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        sudo git config --global --add safe.directory /home/runner/work/FreeCAD/FreeCAD/parts/freecad/src
+    - name: install snapcraft
+      run: sudo snap install snapcraft --classic
+    # build in destructive mode because building in LXD is way too slow 
+    # due to the kde-neon SDK snap being mounted via fuse
+    - name: build snap 
+      run: |
+          sudo snapcraft --destructive-mode
+          sudo rm -rf $HOME/.config/snapcraft
+    - name: upload snap
+      env:
+        SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.token }}
+      run: |
+        if endsWith(inputs.ref, 'edge'); then
+          release_to="edge"
+        elif endsWith(inputs.ref, 'tip'); then
+          release_to="beta"
+        fi
+        snapcraft upload --release=${release_to} freecad-realthunder*.snap
