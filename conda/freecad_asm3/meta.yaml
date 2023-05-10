@@ -45,6 +45,7 @@ requirements:
     - xerces-c
     - zlib
     - vtk
+    - swig
     - eigen
     - pybind11
     - coin3d-rt
