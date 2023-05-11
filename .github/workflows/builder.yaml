@@ -88,43 +88,8 @@ jobs:
           overwrite: true
           artifacts_name: artifacts
 
-      - name: Make bundle
-        id: make
-        if: ${{ inputs.arch == '64' }}
-        shell: bash -xl {0}
-        run: |
-            # plain conda has hiccup on dependency solving
-            export CONDA_CMD=mamba
-            # The command 'conda' is exposed as a bash function, which seems
-            # to be not accessible if calling from another script on Windows
-            # bash (Linux seems fine). So we try source our script (that calls
-            # 'conda') as a work around.
-            . conda/make-bundle.sh ${{ inputs.ref }} ${{ inputs.python-version }}
-
-      - name: Delete old release assets
-        if: ${{ env.RELEASE_NAME }}
-        uses: realthunder/delete-release-assets@v1
-        with:
-          fail-if-no-release: false
-          token: ${{ github.token }}
-          tag: ${{ env.RELEASE_NAME }}
-          # repository: realthunder/FreeCAD
-          assets: |
-              ${{ env.RELEASE_ASSETS }}
-
-      - name: Upload release
-        if: ${{ env.RELEASE_NAME }}
-        uses: realthunder/action-gh-release@v1
-        with:
-          body: ${{ inputs.changelog }}
-          files: build/out/*
-          name: ${{ env.RELEASE_NAME }}
-          prerelease: ${{ env.IS_PRERELEASE }}
-          tag_name: ${{ env.RELEASE_NAME }}
-          token: ${{ github.token }}
-
   bundle:
-    if: ${{ inputs.arch == 'aarch64' }}
+    if: ${{ (inputs.arch != 'arm64') || !startsWith(inputs.os, 'macos') }}
     needs: build
     uses: ./.github/workflows/bundler.yaml
     with:
