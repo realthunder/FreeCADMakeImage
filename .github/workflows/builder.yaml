@@ -85,7 +85,8 @@ jobs:
           label: main
           # debug: true
           token: ${{ secrets.token }}
-          artifacts-name: artifacts
+          overwrite: true
+          artifacts_name: artifacts
 
       - name: Make bundle
         id: make

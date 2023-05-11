@@ -100,7 +100,7 @@ if [ $os = Win ]; then
 fi
 
 $conda_cmd create -p $appdir $pkgs \
-    --copy -c realthunder -c freecad/label/dev -c conda-forge -y
+    --copy -c local -c realthunder -c freecad/label/dev -c conda-forge -y
 
 export FMK_WB_BASE_PATH=$appdir
 export FMK_WB_LIST="asm3"
