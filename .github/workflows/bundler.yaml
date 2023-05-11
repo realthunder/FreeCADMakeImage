@@ -106,7 +106,6 @@ jobs:
         if: ${{ env.RELEASE_NAME }}
         uses: realthunder/delete-release-assets@v1
         with:
-          fail-if-no-assets: false
           fail-if-no-release: false
           token: ${{ github.token }}
           tag: ${{ env.RELEASE_NAME }}
