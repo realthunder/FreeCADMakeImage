@@ -51,7 +51,7 @@ requirements:
     - coin3d-rt
     - pivy-rt
     - pyside2
-    - smesh ==9.9
+    - smesh-rt ==9.9
     - hdf5 
     - freetype
     - libspnav  # [linux]
@@ -77,7 +77,7 @@ requirements:
     - future
     - pyyaml
     - libspnav  # [linux]
-    - {{ pin_compatible('smesh', max_pin='x.x.x') }}
+    - {{ pin_compatible('smesh-rt', max_pin='x.x.x') }}
     - pcl
     - ply
     - gmsh
