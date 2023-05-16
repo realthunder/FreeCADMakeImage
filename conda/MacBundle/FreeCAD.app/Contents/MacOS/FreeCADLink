@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-HERE=$(dirname "$(dirname "$0")")
+HERE=$(dirname "$0")
 HERE=$(cd "$HERE";pwd)
+HERE=$(dirname "$HERE")
 export PREFIX=$HERE/Resources
 export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 export PYTHONHOME=$PREFIX
