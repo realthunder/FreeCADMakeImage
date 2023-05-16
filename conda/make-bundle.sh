@@ -48,7 +48,7 @@ Linux*)
     ;;
 Darwin*)
     os=MacOS
-    cp -a ../conda/MacBundle FreeCAD.app
+    cp -a ../conda/MacBundle/FreeCAD.app .
     appdir=FreeCAD.app/Contents/Resources
     ;;
 *)
