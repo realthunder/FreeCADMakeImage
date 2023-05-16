@@ -255,7 +255,7 @@ cp bin/qt.conf libexec/
 if [ $os = MacOS ]; then
     popd
     $branding/install.sh $branding $appdir
-    hdiutil create -fs HFS+ -srcfolder $appdir $out/$image_name.dmg
+    hdiutil create -fs HFS+ -srcfolder FreeCAD.app $out/$image_name.dmg
     shasum -a 256 $out/$image_name.dmg > $out/$image_name.dmg-SHA256.txt
     exit
 fi
