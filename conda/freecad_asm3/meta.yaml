@@ -8,7 +8,7 @@ source:
   git_url : ../../repo
 
 build:
-  number: 2
+  number: 3
 
 requirements:
   run_constrained:
@@ -39,7 +39,8 @@ requirements:
   host:
     - boost-cpp
     - python
-    - qt-main
+    - qt-main           # [not win]
+    - qt-main 5.15.4    # [win]
     - qt-webengine
     - occt 
     - xerces-c
@@ -60,7 +61,8 @@ requirements:
     - ply
   run:
     - python
-    - qt-main
+    - qt-main           # [not win]
+    - qt-main 5.15.4    # [win]
     - qt-webengine
     - occt
     - pyside2
