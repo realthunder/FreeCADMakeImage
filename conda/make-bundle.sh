@@ -37,7 +37,7 @@ os=`uname`
 case `uname` in
 Windows*|MINGW*)
     os=Win
-    pkgs="qt-main=5.15.4 $pkgs"
+    pkgs="qt-main=5.15.6 $pkgs"
     ;;
 Linux*)
     os=Linux

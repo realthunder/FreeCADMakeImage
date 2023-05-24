@@ -40,7 +40,7 @@ requirements:
     - boost-cpp
     - python
     - qt-main           # [not win]
-    - qt-main 5.15.4    # [win]
+    - qt-main 5.15.6    # [win]
     - qt-webengine
     - occt 
     - xerces-c
@@ -62,7 +62,7 @@ requirements:
   run:
     - python
     - qt-main           # [not win]
-    - qt-main 5.15.4    # [win]
+    - qt-main 5.15.6    # [win]
     - qt-webengine
     - occt
     - pyside2
