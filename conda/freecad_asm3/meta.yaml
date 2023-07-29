@@ -59,6 +59,7 @@ requirements:
     - pcl
     - six
     - ply
+    - fmt ==9.1.0
   run:
     - python
     - qt-main           # [not win]
