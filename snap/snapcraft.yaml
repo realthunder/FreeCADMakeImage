@@ -298,6 +298,8 @@ parts:
       - graphviz
     stage-packages:
       - graphviz
+    filesets:
+      removedoc : [ -usr/share/doc/* ]
     override-build: |
       dot -c
       cp \
