@@ -85,6 +85,7 @@ requirements:
     - ply
     - gmsh
     - graphviz
+    - fmt ==9.1.0
     - matplotlib
 
 # test:
