@@ -64,7 +64,7 @@ jobs:
             echo "Invalid tag"
             exit 1
         esac
-        asset=FreeCAD-Link-$release-Snap-X86_64
+        asset=FreeCAD-Link-$release-Snap-x86_64
         name=$asset-$tag.snap
         ln -s freecad-realthunder*.snap $name
         shasum -a 256 $name > $name-SHA256.txt
