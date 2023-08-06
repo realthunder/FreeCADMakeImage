@@ -43,6 +43,7 @@ Linux*)
     os=Linux
     cp -a ../conda/AppDir .
     appdir=AppDir/usr
+    pkds="$pkgs qt-gtk-platformtheme qgnomeplatform"
     if [ $arch != aarch64 ]; then
         pkgs="$pkgs fcitx-qt5 appimage-updater-bridge"
     fi
