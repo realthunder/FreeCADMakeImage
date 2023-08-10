@@ -151,11 +151,11 @@ $conda_cmd list -e -p $appdir > $appdir/packages.txt
 
 if [ $os = Win ]; then
     pushd $appdir
+    mkdir -p bin
     # Why do we get permission denied error if move mingw64?
     # mv Library/mingw64 .
-    cp -a Library/mingw64 .
-    mv Library/plugins .
-    mkdir -p bin
+    cp -a Library/mingw64/bin/* bin/
+    mv Library/plugins  bin/
     mv share Scripts Lib DLLs bin/
     mv packages.txt python* msvc* ucrt* bin/
     rm -f Library/bin/api*.dll
@@ -167,6 +167,9 @@ if [ $os = Win ]; then
         sed -i -e "s@other is 0@other == 0@g" $mpmath
     fi
 
+    mkdir -p translations/qtwebengine_locale
+    cp -a Library/translations/qtweb*.qm translations/qtwebengine_locale
+
     for dir in Mod Ext data lib resources translations; do
         if test -d $dir; then
             cp -a Library/$dir/* $dir/
@@ -174,6 +177,7 @@ if [ $os = Win ]; then
             mv Library/$dir .
         fi
     done
+
     for file in QtWebEngineProcess assistant ccx gmsh; do
         mv Library/bin/$file.exe bin/
     done
