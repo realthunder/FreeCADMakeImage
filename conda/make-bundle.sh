@@ -155,7 +155,7 @@ if [ $os = Win ]; then
     # Why do we get permission denied error if move mingw64?
     # mv Library/mingw64 .
     cp -a Library/mingw64/bin/* bin/
-    mv Library/plugins  bin/
+    mv Library/plugins  ./
     mv share Scripts Lib DLLs bin/
     mv packages.txt python* msvc* ucrt* bin/
     rm -f Library/bin/api*.dll
