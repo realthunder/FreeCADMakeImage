@@ -43,7 +43,12 @@ Linux*)
     os=Linux
     cp -a ../conda/AppDir .
     appdir=AppDir/usr
-    pkgs="$pkgs qt-gtk-platformtheme qgnomeplatform"
+
+    # We need the theme to enable native file dialog. But, installing
+    # platformtheme causes preference dialog freezing for some reason. So
+    # disable for now.
+    #
+    # pkgs="$pkgs qt-gtk-platformtheme qgnomeplatform"
     if [ $arch != aarch64 ]; then
         pkgs="$pkgs fcitx-qt5 appimage-updater-bridge"
     fi
