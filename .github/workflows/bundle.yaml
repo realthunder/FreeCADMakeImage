@@ -25,7 +25,7 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.11"
             arch: "aarch64"
-          - os: self-hosted
+          - os: self-hosted-mac
             arch: arm64
             python-version: "3.11"
 

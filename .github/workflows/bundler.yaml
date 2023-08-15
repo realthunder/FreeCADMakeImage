@@ -31,14 +31,13 @@ jobs:
           submodules: true
 
       - name: Conda environment creation and activation
-        if: ${{ inputs.arch == '64' }}
+        if: ${{ inputs.arch != 'aarch64' }}
         uses: realthunder/setup-miniconda@v2
         with:
           python-version: ${{ inputs.python-version }}
           auto-update-conda: false
           auto-activate-base: false
           show-channel-urls: true
-          # use-mamba: ${{ startsWith(inputs.os, 'macos') }}
           miniforge-variant: Mambaforge
 
       - name: Make bundle for ${{ inputs.arch }}
@@ -91,7 +90,7 @@ jobs:
 
       - name: Make bundle
         id: make
-        if: ${{ inputs.arch == '64' }}
+        if: ${{ inputs.arch != 'aarch64' }}
         shell: bash -xl {0}
         run: |
             # plain conda has hiccup on dependency solving

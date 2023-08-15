@@ -55,6 +55,8 @@ jobs:
         run: |
           if ${{ startsWith(inputs.os, 'macos') }}; then
             platform=osx
+          elif ${{ endsWith(inputs.os, 'mac') }}; then
+            platform=osx
           elif ${{ startsWith(inputs.os, 'windows') }}; then
             platform=win
           else
