@@ -89,7 +89,6 @@ jobs:
           artifacts_name: artifacts
 
   bundle:
-    if: ${{ (inputs.arch != 'arm64') || !startsWith(inputs.os, 'macos') }}
     needs: build
     uses: ./.github/workflows/bundler.yaml
     with:
