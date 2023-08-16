@@ -108,6 +108,7 @@ jobs:
         uses: realthunder/delete-release-assets@v1
         with:
           fail-if-no-release: false
+          fail-if-no-assets: false
           token: ${{ github.token }}
           tag: ${{ env.RELEASE_NAME }}
           # repository: realthunder/FreeCAD
