@@ -40,6 +40,7 @@ jobs:
           auto-activate-base: false
           show-channel-urls: true
           miniforge-variant: Mambaforge
+          miniforge-version: latest
 
       - name: Make bundle for ${{ inputs.arch }}
         if: ${{ inputs.arch == 'aarch64' }}

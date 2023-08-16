@@ -47,6 +47,7 @@ jobs:
           auto-activate-base: false
           show-channel-urls: true
           miniforge-variant: Mambaforge
+          miniforge-version: latest
       - name: Install mamba build
         shell: bash -el {0}
         run: mamba install boa -c conda-forge
