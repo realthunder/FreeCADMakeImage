@@ -32,9 +32,10 @@ jobs:
 
       - name: Conda environment creation and activation
         if: ${{ inputs.arch != 'aarch64' }}
-        uses: realthunder/setup-miniconda@v2
+        uses: realthunder/setup-miniconda@main
         with:
           python-version: ${{ inputs.python-version }}
+          architecture: ${{ inputs.arch }}
           auto-update-conda: false
           auto-activate-base: false
           show-channel-urls: true

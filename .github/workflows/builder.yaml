@@ -38,9 +38,10 @@ jobs:
           path: ./repo
           # submodules: true
       - name: Conda environment creation and activation
-        uses: conda-incubator/setup-miniconda@v2
+        uses: realthunder/setup-miniconda@main
         with:
           python-version: ${{ inputs.python-version }}
+          architecture: ${{ inputs.arch }}
           environment-file: conda/freecad_asm3/build_env.yaml
           auto-update-conda: false
           auto-activate-base: false
