@@ -116,6 +116,7 @@ if test $win; then
     mv packages.txt python* msvc* ucrt* bin/
     rm -f Library/bin/api*.dll
     mv Library/bin/*.dll bin/
+    mv Library/mingw-w64/bin/*.dll bin/
     mv Library/bin/FreeCAD* bin/
     for dir in Mod Ext data lib resources translations; do
         mv Library/$dir .
