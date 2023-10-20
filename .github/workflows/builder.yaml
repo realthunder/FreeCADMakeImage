@@ -41,7 +41,7 @@ jobs:
         uses: realthunder/setup-miniconda@main
         with:
           python-version: ${{ inputs.python-version }}
-          architecture: ${{ inputs.arch }}
+          architecture: ${{ inputs.arch == 'aarch64' && '64' || inputs.arch }}
           environment-file: conda/freecad_asm3/build_env.yaml
           auto-update-conda: false
           auto-activate-base: false
