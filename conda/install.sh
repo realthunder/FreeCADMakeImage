@@ -114,9 +114,9 @@ if test $win; then
     mkdir -p bin
     mv share Scripts Lib DLLs bin/
     mv packages.txt python* msvc* ucrt* bin/
+    cp -a Library/mingw-w64/bin/* bin/
     rm -f Library/bin/api*.dll
     mv Library/bin/*.dll bin/
-    mv Library/mingw-w64/bin/*.dll bin/
     mv Library/bin/FreeCAD* bin/
     for dir in Mod Ext data lib resources translations; do
         mv Library/$dir .
