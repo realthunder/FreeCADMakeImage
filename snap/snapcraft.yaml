@@ -30,8 +30,12 @@ license: LGPL-2.0-or-later
 assumes: [snapd2.55.3] # for cups interface & private shared memory
 
 layout:
+  /usr/share/X11:
+    symlink: $SNAP/kf5/usr/share/X11
   /usr/share/libdrm/amdgpu.ids:
-    symlink: $SNAP/kf5/usr/share/libdrm/amdgpu.ids
+    bind-file: $SNAP/kf5/usr/share/libdrm/amdgpu.ids
+  /usr/bin/mpirun: # ElmerSolver_mpi
+    symlink: $SNAP/usr/bin/orterun
   /usr/share/openmpi:
     symlink: $SNAP/usr/share/openmpi
   /etc/openmpi:
@@ -70,7 +74,7 @@ plugs:
     private: true
 
 environment:
-  LD_LIBRARY_PATH: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/blas:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/lapack # numpy
+  LD_LIBRARY_PATH: "$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/blas:$SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/lapack:$LD_LIBRARY_PATH"
   LD_PRELOAD: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/libstubchown.so
   FREECAD_USER_HOME: $SNAP_USER_COMMON
   GIT_EXEC_PATH: $SNAP/usr/lib/git-core
@@ -114,8 +118,6 @@ package-repositories:
   - type: apt
     ppa: elmer-csc-ubuntu/elmer-csc-ppa
   - type: apt
-    ppa: openscad/releases
-  - type: apt
     components:
       - main
     suites:
@@ -128,12 +130,16 @@ parts:
   stub-chown:
     plugin: meson
     source: snap/local/stub-chown
+    source-type: local
+    build-packages:
+    - meson
     meson-parameters:
       - --prefix=/usr
 
   snap-setup-mod:
     plugin: dump
     source: snap/local/snap-setup-mod
+    source-type: local
     organize:
       "*": usr/Mod/SnapSetup/
 
@@ -182,6 +188,7 @@ parts:
       - libshiboken2-dev
       - pybind11-dev
       - libfreeimage-dev
+      - openscad
     stage-packages:
       - libaec0
       - libboost-filesystem1.71.0
@@ -199,7 +206,7 @@ parts:
       - libmed11
       - libopenexr24
       - libopenmpi3
-      - libpsm-infinipath1
+      - on amd64: [libpsm-infinipath1]
       - libpython3.8
       - libpython3.8-minimal
       - libpython3.8-stdlib
@@ -215,8 +222,10 @@ parts:
       - python3-numpy
       - python3-matplotlib
       - python3-six
+      - python3-packaging # Path
       - python3-pyparsing
       - python3-setuptools-scm
+      - python3-collada # DAE import
       - python3-cycler
       - python3-dateutil
       - python3-git
@@ -227,6 +236,7 @@ parts:
       - python3-pyside2.qtsvg
       - python3-pyside2.qtwidgets
       - python3-pyside2.qtnetwork
+      - python3-pyside2.qtwebenginewidgets
       - python3-pyside2.qtuitools
       - python3-qtpy # Nodes addon
       - calculix-ccx # FEM
