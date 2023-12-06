@@ -584,7 +584,7 @@ EOS
     get_cmake() {
         mkdir -p tools
         cmake_ver=$1
-        cmake_name=cmake-$cmake_ver-win64-x64
+        cmake_name=cmake-$cmake_ver-windows-x86_64
         cmake=$PWD/tools/$cmake_name/bin/cmake.exe
         if ! test -e $cmake; then
             rm -rf tools/$cmake_name
@@ -595,7 +595,7 @@ EOS
 
     if test $py3; then
 
-        get_cmake "3.14.5"
+        get_cmake "3.27.7"
 
         if test $libpack_old; then
             url=${FMK_LIBPACK_URL:=https://github.com/realthunder/FreeCAD_Assembly3/releases/download/0.11/FreeCADLibs_asm3_12.5.5_x64_VC17.7z}
@@ -610,7 +610,7 @@ EOS
             cmake_opts="-DBUILD_ENABLE_CXX_STD:STRING=C++17"
         fi
 
-        vs_name="Visual Studio 16 2019"
+        vs_name="Visual Studio 17 2022"
         vs_arch="-A x64"
 
         if ! test -d libpack$vs; then
