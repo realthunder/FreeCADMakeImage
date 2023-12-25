@@ -189,6 +189,10 @@ if [ $os = Win ]; then
     done
     # cp ../ssl-patch.py bin/Lib/ssl.py
     rm -rf tmp Tools Menu Library conda-meta etc include fonts libs sip
+    wget -c https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/Git-2.43.0-64-bit.tar.bz2 -O Git.tar.bz2
+    mkdir bin/PortableGit
+    tar xf Git.tar.bz2 -C bin/PortableGit
+    rm Git.tar.bz2
     find . -maxdepth 1 -type f -delete
     find . -type f \( -name "*.pdb" -o -name "*.lib" -o -name __pycache__ \) -delete
     cat > bin/qt.conf << EOS
@@ -202,15 +206,17 @@ EOS
 
     cat << EOS > $appdir/RunFreeCAD.bat 
 cd %~dp0/bin
-set PATH=%~dp0\mingw64\bin;%PATH%
+set PATH=%~dp0\bin\PortableGit\bin;%PATH%
 set SSL_CERT_FILE=%~dp0\bin\Lib\site-packages\certifi\cacert.pem
+set GIT_EXEC_PATH=%~dp0\bin\PortableGit\mingw64\libexec\git-core
 FreeCADLink.exe
 EOS
     cat << EOS > $appdir/RunJupyter.bat 
 set QT_AUTO_SCREEN_SCALE_FACTOR=1
 cd %~dp0/bin
-set PATH=%~dp0\mingw64\bin;%PATH%
+set PATH=%~dp0\bin\PortableGit\bin;%PATH%
 set SSL_CERT_FILE=%~dp0\bin\Lib\site-packages\certifi\cacert.pem
+set GIT_EXEC_PATH=%~dp0\bin\PortableGit\mingw64\libexec\git-core
 python.exe -m jupyter notebook
 EOS
 
