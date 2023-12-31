@@ -656,7 +656,6 @@ EOS
             -DBUILD_FLAT_MESH:BOOL=ON \
             -DBUILD_FEM_NETGEN:BOOL=ON \
             -DOCC_INCLUDE_DIR=$libpackpath/include/opencascade \
-            -DPYTHON_EXECUTABLE=$libpackpath/bin/python.exe \
             ..
     fi
 
