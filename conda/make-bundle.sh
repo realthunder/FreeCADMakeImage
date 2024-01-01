@@ -189,7 +189,12 @@ if [ $os = Win ]; then
     done
     # cp ../ssl-patch.py bin/Lib/ssl.py
     rm -rf tmp Tools Menu Library conda-meta etc include fonts libs sip
-    wget -c https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/Git-2.43.0-64-bit.tar.bz2 -O Git.tar.bz2
+    if which wget; then
+        wget='wget'
+    elif test -f /c/msys64/usr/bin/wget.exe; then
+        wget='/c/msys64/usr/bin/wget.exe'
+    fi
+    $wget -c https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/Git-2.43.0-64-bit.tar.bz2 -O Git.tar.bz2
     mkdir bin/PortableGit
     tar xf Git.tar.bz2 -C bin/PortableGit
     rm Git.tar.bz2
