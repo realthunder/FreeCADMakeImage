@@ -98,5 +98,7 @@ jobs:
           release_to="edge"
         elif ${{ endsWith(inputs.ref, 'tip') }}; then
           release_to="beta"
+        elif ${{ endsWith(inputs.ref, 'stable') }}; then
+          release_to="stable"
         fi
         snapcraft upload --release=${release_to} freecad-realthunder*.snap

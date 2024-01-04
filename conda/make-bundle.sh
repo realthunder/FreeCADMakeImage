@@ -193,6 +193,9 @@ if [ $os = Win ]; then
         wget='wget'
     elif test -f /c/msys64/usr/bin/wget.exe; then
         wget='/c/msys64/usr/bin/wget.exe'
+    else
+        echo 'wget not found'
+        exit 1
     fi
     $wget -c https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/Git-2.43.0-64-bit.tar.bz2 -O Git.tar.bz2
     mkdir bin/PortableGit
