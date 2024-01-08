@@ -12,7 +12,7 @@ on:
 
 jobs:
   publish_amd64:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout build scripts
       uses: actions/checkout@v3
@@ -58,7 +58,7 @@ jobs:
             echo "RELEASE_NAME=$tag" >> $GITHUB_ENV
             echo "IS_PRERELEASE=false" >> $GITHUB_ENV
             release=Stable
-            tag=${tag%stable}
+            tag=${tag%edge}
             ;;
         *)
             echo "Invalid tag"
