@@ -67,7 +67,6 @@ cmake -G "$cmake_generator" \
       -D Python3_EXECUTABLE:FILEPATH=$PREFIX/bin/python \
       -D Python3_FIND_FRAMEWORK:STRING=NEVER \
       -D BUILD_FEM_NETGEN:BOOL=ON \
-      -D BUILD_PLOT:BOOL=OFF \
       -D BUILD_SHIP:BOOL=OFF \
       -D OCCT_CMAKE_FALLBACK:BOOL=OFF \
       -D FREECAD_USE_QT_DIALOG:BOOL=ON \
