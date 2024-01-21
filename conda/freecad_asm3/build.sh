@@ -19,18 +19,9 @@ if [[ ${HOST} =~ .*linux.* ]]; then
     fi
 fi
 
-if [[ ${HOST} =~ .*darwin.* ]] && [[ ${target_platform} =~ osx-64 ]]; then
-    # add hacks for osx here!
-    echo "adding hacks for osx"
-    
-    # should be applied @vtk-feedstock
-    # sed -i '381,383d' ${PREFIX}/lib/cmake/vtk-9.0/VTK-targets.cmake
-
-    ln -s /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk
-    ln -s /Applications/Xcode.app /Applications/Xcode_11.7.app
-
+if [[ ${HOST} =~ .*darwin.* ]]; then
     # install space-mouse
-    curl -o /tmp/3dFW.dmg -L 'https://download.3dconnexion.com/drivers/mac/10-6-6_360DF97D-ED08-4ccf-A55E-0BF905E58476/3DxWareMac_v10-6-6_r3234.dmg'
+    curl -o /tmp/3dFW.dmg -L 'https://download.3dconnexion.com/drivers/mac/10-7-0_B564CC6A-6E81-42b0-82EC-418EA823B81A/3DxWareMac_v10-7-0_r3411.dmg'
     hdiutil attach -readonly /tmp/3dFW.dmg
     sudo installer -package /Volumes/3Dconnexion\ Software/Install\ 3Dconnexion\ software.pkg -target /
     diskutil eject /Volumes/3Dconnexion\ Software
@@ -39,9 +30,6 @@ if [[ ${HOST} =~ .*darwin.* ]] && [[ ${target_platform} =~ osx-64 ]]; then
     CMAKE_PLATFORM_FLAGS+=(-DFREECAD_USE_3DCONNEXION:BOOL=ON)
     CMAKE_PLATFORM_FLAGS+=(-D3DCONNEXIONCLIENT_FRAMEWORK:FILEPATH="/Library/Frameworks/3DconnexionClient.framework")
 
-fi
-
-if [[ ${HOST} =~ .*darwin.* ]]; then
     CXXFLAGS="${CXXFLAGS} -D_LIBCPP_DISABLE_AVAILABILITY -DBOOST_NO_CXX98_FUNCTION_BASE"
 fi
 
@@ -57,7 +45,6 @@ cmake -G "$cmake_generator" \
       -D OCC_INCLUDE_DIR:FILEPATH=$PREFIX/include \
       -D USE_BOOST_PYTHON:BOOL=OFF \
       -D FREECAD_USE_PYBIND11:BOOL=ON \
-      -D BUILD_ENABLE_CXX_STD:STRING=C++17 \
       -D SMESH_INCLUDE_DIR:FILEPATH=$PREFIX/include/smesh \
       -D FREECAD_USE_EXTERNAL_SMESH=ON \
       -D BUILD_FLAT_MESH:BOOL=ON \
@@ -71,8 +58,8 @@ cmake -G "$cmake_generator" \
       -D OCCT_CMAKE_FALLBACK:BOOL=OFF \
       -D FREECAD_USE_QT_DIALOG:BOOL=ON \
       -D Boost_NO_BOOST_CMAKE:BOOL=ON \
-      -D FREECAD_USE_QWEBKIT:BOOL=ON \
       -D FREECAD_USE_PCL:BOOL=ON \
+      -D FREECAD_USE_PCH:BOOL=OFF \
       -D BUILD_DYNAMIC_LINK_PYTHON:BOOL=OFF \
       ${CMAKE_PLATFORM_FLAGS[@]} \
       ../..
@@ -83,3 +70,4 @@ else
     cmake --build . --target install --parallel 4
 fi
 rm -r ${PREFIX}/doc     # smaller size of package!
+rm -r ${PREFIX}/share/doc/FreeCAD     # smaller size of package!
