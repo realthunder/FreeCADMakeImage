@@ -1,7 +1,9 @@
-name: freecad
+name: freecad-realthunder
 base: core22
 adopt-info: freecad
 summary: An open source parametric 3D CAD modeler (realthunder's version)
+issues: https://github.com/realthunder/FreeCAD/issues
+website: https://github.com/realthunder/FreeCAD
 description: |
   FreeCAD is a parametric 3D modeler. Parametric modeling
   allows you to easily modify your design by going back into

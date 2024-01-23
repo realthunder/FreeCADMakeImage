@@ -21,6 +21,10 @@ jobs:
     - name: setup build tag
       run: |
         sed -i 's|source-branch: LinkDaily|source-tag: ${{ inputs.ref }}|' snap/snapcraft.yaml
+        case ${{ inputs.ref }} in
+        *stable)
+            sed -i 's|grade: devel|grade: stable|' snap/snapcraft.yaml
+        esac
 
     - name: git permission workaround
       run: |
@@ -58,7 +62,7 @@ jobs:
             echo "RELEASE_NAME=$tag" >> $GITHUB_ENV
             echo "IS_PRERELEASE=false" >> $GITHUB_ENV
             release=Stable
-            tag=${tag%edge}
+            tag=${tag%stable}
             ;;
         *)
             echo "Invalid tag"
@@ -66,7 +70,7 @@ jobs:
         esac
         asset=FreeCAD-Link-$release-Snap-x86_64
         name=$asset-$tag.snap
-        ln -s freecad-realthunder*.snap $name
+        ln -s freecad*.snap $name
         shasum -a 256 $name > $name-SHA256.txt
         echo "RELEASE_ASSETS=$asset" >> $GITHUB_ENV
 
@@ -101,4 +105,4 @@ jobs:
         elif ${{ endsWith(inputs.ref, 'stable') }}; then
           release_to="stable"
         fi
-        snapcraft upload --release=${release_to} freecad-realthunder*.snap
+        snapcraft upload --release=${release_to} freecad*.snap
