@@ -292,6 +292,8 @@ parts:
 
   python-packages:
     plugin: python
+    source: .
+    source-type: local
     build-packages:
       - libsuitesparse-dev
     stage-packages:
