@@ -321,6 +321,8 @@ parts:
       cp \
         /usr/lib/${CRAFT_ARCH_TRIPLET}/graphviz/config* \
         ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET}/graphviz/
+    organize:
+        "usr/share/doc/*" : usr/share/doc/graphviz
 
   cleanup:
     after: [stub-chown, freecad, python-packages, assembly3, snap-setup-mod, graphviz, branding]
