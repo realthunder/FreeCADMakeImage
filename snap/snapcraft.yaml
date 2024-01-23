@@ -263,8 +263,6 @@ parts:
       if [ "$CRAFT_TARGET_ARCH" = amd64 ]; then
         ln -sf ../libpsm1/libpsm_infinipath.so.1.16  $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET/libpsm_infinipath.so.1
       fi
-
-      craftctl build
       cd $CRAFT_PART_SRC
       iso_date=$(date -I)
       git_hash=$(git rev-parse --short=8 HEAD)
