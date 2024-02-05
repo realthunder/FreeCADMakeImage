@@ -105,6 +105,7 @@ apps:
     common-id: org.freecadweb.FreeCAD.Link.Snap.desktop
     desktop: usr/share/applications/org.freecadweb.FreeCAD.Link.Snap.desktop
     plugs: &plugs
+      - desktop-legacy
       - home
       - opengl
       - removable-media
