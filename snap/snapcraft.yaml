@@ -105,6 +105,7 @@ apps:
     common-id: org.freecadweb.FreeCAD.Link.Snap.desktop
     desktop: usr/share/applications/org.freecadweb.FreeCAD.Link.Snap.desktop
     plugs: &plugs
+      - desktop
       - desktop-legacy
       - home
       - opengl
@@ -256,6 +257,7 @@ parts:
       - libvtk7.1p
       - elmerfem-csc # FEM
       - openscad  # OpenSCAD
+      - fcitx5-frontend-qt5
     override-build: |
       kde_sdk_dir="/snap/kf5-5-108-qt-5-15-10-core22-sdk/current"
       mkdir -p /etc/xdg/qtchooser
