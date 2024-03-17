@@ -12,7 +12,7 @@ conda_cmd=${CONDA_CMD:=conda}
 
 pkgs="python=$py calculix blas=*=openblas git gitpython \
       matplotlib-base numpy sympy pandas gmsh scipy six qtpy \
-      pyyaml pycollada \
+      pyyaml pycollada realthunder::occt \
       lxml xlutils olefile requests \
       blinker opencv qt.py nine docutils fmt jupyter notebook"
 

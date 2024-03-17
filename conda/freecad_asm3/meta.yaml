@@ -42,7 +42,7 @@ requirements:
     - qt-main           # [not win]
     - qt-main 5.15.6    # [win]
     - qt-webengine
-    - occt 
+    - occt 7.7.2
     - xerces-c
     - zlib
     - vtk
@@ -65,7 +65,7 @@ requirements:
     - qt-main           # [not win]
     - qt-main 5.15.6    # [win]
     - qt-webengine
-    - occt
+    - occt 7.7.2
     - pyside2
     - vtk
     - xerces-c
