@@ -5,7 +5,7 @@ package:
   version: {{ environ['GIT_DESCRIBE_TAG'] }}
 
 source:
-  git_url : ../../repo
+  path : ../../repo
 
 build:
   number: 3
