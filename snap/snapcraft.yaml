@@ -159,6 +159,7 @@ parts:
     plugin: cmake
     source: https://github.com/realthunder/FreeCAD.git
     source-branch: LinkDaily
+    source-submodules: []
     cmake-parameters:
       - -DCMAKE_INSTALL_PREFIX=/usr
       - -DCMAKE_INSTALL_LIBDIR=lib
