@@ -37,7 +37,7 @@ requirements:
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
     - qt-main                                # [build_platform != target_platform]
   host:
-    - boost-cpp
+    - boost-cpp 1.78
     - python
     - qt-main           # [not win]
     - qt-main 5.15.6    # [win]
@@ -45,7 +45,7 @@ requirements:
     - occt 7.7.2
     - xerces-c
     - zlib
-    - vtk
+    - vtk 9.2.5
     - swig
     - eigen
     - pybind11
@@ -67,10 +67,10 @@ requirements:
     - qt-webengine
     - occt 7.7.2
     - pyside2
-    - vtk
+    - vtk 9.2.5
     - xerces-c
     - zlib
-    - boost-cpp
+    - boost-cpp 1.78
     - hdf5
     - coin3d-rt
     - pivy-rt
