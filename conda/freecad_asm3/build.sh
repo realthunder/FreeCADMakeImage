@@ -33,7 +33,10 @@ if [[ ${HOST} =~ .*darwin.* ]]; then
     CMAKE_PLATFORM_FLAGS+=(-DFREECAD_USE_3DCONNEXION:BOOL=ON)
     CMAKE_PLATFORM_FLAGS+=(-D3DCONNEXIONCLIENT_FRAMEWORK:FILEPATH="/Library/Frameworks/3DconnexionClient.framework")
 
-    CXXFLAGS="${CXXFLAGS} -Wno-enum-constexpr-conversion -D_LIBCPP_DISABLE_AVAILABILITY -DBOOST_NO_CXX98_FUNCTION_BASE"
+    CXXFLAGS="${CXXFLAGS} -D_LIBCPP_DISABLE_AVAILABILITY -DBOOST_NO_CXX98_FUNCTION_BASE"
+
+    # see https://github.com/boostorg/numeric_conversion/issues/24
+    CXXFLAGS="${CXXFLAGS} -Wno-enum-constexpr-conversion"
 fi
 
 cmake -G "$cmake_generator" \
