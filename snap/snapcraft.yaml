@@ -172,10 +172,10 @@ parts:
       - -DFREECAD_USE_QT_FILEDIALOG=ON
       - -DBUILD_FLAT_MESH=ON
     build-snaps:
-      - freecad-deps-core22/candidate
+      - freecad-rt-deps-core22
       - coin3d-realthunder
     stage-snaps:
-      - freecad-deps-core22/candidate
+      - freecad-rt-deps-core22
       - coin3d-realthunder
     build-packages:
       - g++
