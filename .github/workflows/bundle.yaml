@@ -35,5 +35,6 @@ jobs:
       arch: ${{ matrix.arch }}
       python-version: ${{ matrix.python-version }}
       ref: ${{ inputs.ref }}
+      use_mamba: false
     secrets:
       token: ${{ secrets.token }}

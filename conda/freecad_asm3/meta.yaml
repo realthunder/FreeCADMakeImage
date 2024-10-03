@@ -12,9 +12,8 @@ build:
 
 requirements:
   run_constrained:
-    - moab * mpi_openmpi_tempest* # [not osx]
-    - moab * mpi_mpich_tempest* # [osx]
-    - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.12") }}  # [osx]
+    - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("11.0") }}   # [osx and arm64]
+    - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
   build:
     - {{ compiler("cxx") }}
     - {{ cdt('mesa-libgl-devel') }}      # [linux]
@@ -37,16 +36,14 @@ requirements:
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
     - qt-main                                # [build_platform != target_platform]
   host:
-    - boost-cpp 1.78
+    - libboost-devel
     - python
-    - qt-main           # [not win]
-    - qt-main 5.15.6    # [win]
+    - qt-main
     - qt-webengine
     - occt 7.7.2
     - xerces-c
     - zlib
-    - vtk 9.2.5
-    - swig
+    - vtk 9.2.6
     - eigen
     - pybind11
     - coin3d-rt
@@ -62,15 +59,12 @@ requirements:
     - fmt ==9.1.0
   run:
     - python
-    - qt-main           # [not win]
-    - qt-main 5.15.6    # [win]
-    - qt-webengine
+    - qt
     - occt 7.7.2
     - pyside2
-    - vtk 9.2.5
+    - vtk 9.2.6
     - xerces-c
     - zlib
-    - boost-cpp 1.78
     - hdf5
     - coin3d-rt
     - pivy-rt
@@ -85,7 +79,6 @@ requirements:
     - ply
     - gmsh
     - graphviz
-    - fmt ==9.1.0
     - matplotlib
 
 # test:

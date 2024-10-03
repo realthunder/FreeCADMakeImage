@@ -13,7 +13,7 @@ conda_cmd=${CONDA_CMD:=conda}
 pkgs="python=$py calculix blas=*=openblas git gitpython \
       matplotlib-base numpy sympy pandas gmsh scipy six qtpy \
       pyyaml pycollada realthunder::occt \
-      lxml xlutils olefile requests \
+      lxml xlutils olefile requests ifcopenshell opencamlib \
       blinker opencv qt.py nine docutils fmt jupyter notebook"
 
 
@@ -28,16 +28,10 @@ arm64)
     ;;
 esac
 
-if [ $arch != aarch64 ]; then
-    # pkgs="$pkgs libredwg ifcopenshell opencamlib"
-    pkgs="$pkgs ifcopenshell opencamlib"
-fi
-
 os=`uname`
 case `uname` in
 Windows*|MINGW*)
     os=Win
-    pkgs="qt-main=5.15.6 $pkgs"
     ;;
 Linux*)
     os=Linux

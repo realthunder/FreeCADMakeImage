@@ -83,7 +83,7 @@ jobs:
                 source /opt/conda/etc/profile.d/conda.sh
                 cd ${{ github.workspace }}
                 export GITHUB_ENV=github_env.txt
-                export CONDA_CMD=mamba
+                export CONDA_CMD=conda
                 source conda/make-bundle.sh ${{ inputs.ref }} ${{ inputs.python-version }}
 
       - name: Collect env output
@@ -97,7 +97,7 @@ jobs:
         shell: bash -xl {0}
         run: |
             # plain conda has hiccup on dependency solving
-            export CONDA_CMD=mamba
+            export CONDA_CMD=conda
             # The command 'conda' is exposed as a bash function, which seems
             # to be not accessible if calling from another script on Windows
             # bash (Linux seems fine). So we try source our script (that calls
