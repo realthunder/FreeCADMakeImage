@@ -39,7 +39,8 @@ jobs:
           auto-update-conda: false
           auto-activate-base: false
           show-channel-urls: true
-          miniforge-variant: Mambaforge
+          # miniforge-variant: Mambaforge
+          miniforge-variant: Miniforge3
           miniforge-version: latest
 
       - name: Make bundle for ${{ inputs.arch }}
@@ -55,7 +56,7 @@ jobs:
                 apt-get -q install -y file wget gnupg2 desktop-file-utils libarchive-tools appstream \
                 libglib2.0-0 git binutils coreutils fuse patchelf squashfs-tools strace util-linux zsync
                 apt-get -q clean
-                installer=Mambaforge-Linux-${{ inputs.arch }}.sh
+                installer=Miniforge3-Linux-${{ inputs.arch }}.sh
                 wget -q https://github.com/conda-forge/miniforge/releases/latest/download/$installer
                 chmod +x $installer
                 ./$installer -b -p /opt/conda
