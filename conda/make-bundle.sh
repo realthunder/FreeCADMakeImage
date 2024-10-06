@@ -11,7 +11,7 @@ mkdir -p $out
 conda_cmd=${CONDA_CMD:=conda}
 
 pkgs="python=$py calculix blas=*=openblas git gitpython \
-      matplotlib-base numpy sympy pandas gmsh scipy six qtpy \
+      matplotlib numpy sympy pandas gmsh scipy six qtpy \
       pyyaml pycollada realthunder::occt \
       lxml xlutils olefile requests ifcopenshell opencamlib \
       blinker opencv qt.py nine docutils fmt jupyter notebook"

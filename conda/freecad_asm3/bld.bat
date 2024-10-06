@@ -16,8 +16,8 @@ set "CXXFLAGS= "
 set "LDFLAGS_SHARED= ucrt.lib"
 
 REM remove Chocolatey/bin from search path to hide ccache, as it cause resouce compilation failure
-set PATH=%PATH:C:\ProgramData\Chocolatey\bin;=%
-echo "modified path: %PATH%"
+REM  set PATH=%PATH:C:\ProgramData\Chocolatey\bin;=%
+REM  echo "modified path: %PATH%"
 
 cmake -G "Ninja" ^
       -D BUID_WITH_CONDA:BOOL=ON ^
@@ -49,6 +49,7 @@ cmake -G "Ninja" ^
       -D OCCT_CMAKE_FALLBACK:BOOL=ON ^
       -D BUILD_DYNAMIC_LINK_PYTHON:BOOL=ON ^
       -D Boost_NO_BOOST_CMAKE:BOOL=ON ^
+      -D FREECAD_USE_CCACHE:BOOL=OFF ^
       -D FREECAD_USE_PCH:BOOL=OFF ^
       -D FREECAD_USE_PCL:BOOL=ON ^
       -D INSTALL_TO_SITEPACKAGES:BOOL=ON ^
