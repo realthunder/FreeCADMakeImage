@@ -323,7 +323,7 @@ apptool=appiamgetool
 if ! which $apptool; then
     rm -rf $apptool
     appimagetool=appimagetool-$arch.AppImage
-    wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/$appimagetool
+    wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/$appimagetool
     chmod +x $appimagetool
     if [ $arch = aarch64 ]; then
         # Trouble running on aarch64. See https://github.com/AppImage/AppImageKit/issues/1056
