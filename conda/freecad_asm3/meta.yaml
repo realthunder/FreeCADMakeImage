@@ -16,6 +16,7 @@ requirements:
     - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
   build:
     - {{ compiler("cxx") }}
+    # - {{ stdlib("c") }}
     - {{ cdt('mesa-libgl-devel') }}      # [linux]
     - {{ cdt('mesa-dri-drivers') }}      # [linux]
     - {{ cdt('mesa-libegl-devel') }}     # [linux]
@@ -35,11 +36,11 @@ requirements:
     - python                                 # [build_platform != target_platform]
     - cross-python_{{ target_platform }}     # [build_platform != target_platform]
     - qt-main                                # [build_platform != target_platform]
+    - pybind11                               # [build_platform != target_platform]
   host:
     - libboost-devel
     - python
     - qt-main
-    - qt-webengine
     - occt 7.7.2
     - xerces-c
     - zlib
@@ -58,9 +59,11 @@ requirements:
     - ply
     - fmt ==9.1.0
     - matplotlib-base
+    - xorg-xproto   # [linux]
+    - yaml-cpp
+    - tbb-devel  # [win]
   run:
     - python
-    - qt
     - occt 7.7.2
     - pyside2
     - vtk 9.2.6

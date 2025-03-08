@@ -52,6 +52,7 @@ jobs:
           show-channel-urls: true
           miniforge-variant: Miniforge3
           miniforge-version: latest
+          channel-priority: strict
       - name: Install mamba build
         if: inputs.use_mamba
         shell: bash -el {0}
