@@ -1,7 +1,7 @@
 channels:
   - realthunder
-  - freecad
   - conda-forge
+  - freecad
   - default
 
 dependencies:

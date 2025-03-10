@@ -1,3 +1,5 @@
 MACOSX_DEPLOYMENT_TARGET:  # [osx]
 - '11.0'                   # [osx and arm64]
 - '10.13'                  # [osx and x86_64]
+cxx_compiler_version:      # [linux]
+- '12'                     # [linux]

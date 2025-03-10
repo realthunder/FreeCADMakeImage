@@ -41,6 +41,7 @@ requirements:
     - libboost-devel
     - python
     - qt-main
+    - qt-webengine
     - occt 7.7.2
     - xerces-c
     - zlib

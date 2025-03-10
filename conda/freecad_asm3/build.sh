@@ -67,6 +67,7 @@ cmake -G "$cmake_generator" \
       -D FREECAD_USE_PCL:BOOL=ON \
       -D FREECAD_USE_PCH:BOOL=OFF \
       -D BUILD_DYNAMIC_LINK_PYTHON:BOOL=OFF \
+      -D BUILD_ASSEMBLY:BOOL=OFF \
       ${CMAKE_PLATFORM_FLAGS[@]} \
       ../..
 
