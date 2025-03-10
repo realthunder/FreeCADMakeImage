@@ -29,40 +29,33 @@ grade: devel
 confinement: strict
 compression: lzo
 license: LGPL-2.0-or-later
-assumes: [snapd2.55.3] # for cups interface & private shared memory
 
 layout:
-  /usr/share/X11:
-    symlink: $SNAP/kf5/usr/share/X11
-  /usr/share/libdrm/amdgpu.ids:
-    bind-file: $SNAP/kf5/usr/share/libdrm/amdgpu.ids
   /usr/bin/mpirun: # ElmerSolver_mpi
     symlink: $SNAP/usr/bin/orterun
   /usr/share/openmpi:
     symlink: $SNAP/usr/share/openmpi
   /etc/openmpi:
     bind: $SNAP/etc/openmpi
-  /usr/lib/$CRAFT_ARCH_TRIPLET/openmpi:
-    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/openmpi
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/openmpi:
+    bind: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/openmpi
   /usr/bin/orted:
     symlink: $SNAP/usr/bin/orted
   /usr/share/pmix:
     symlink: $SNAP/usr/share/pmix
-  /usr/lib/$CRAFT_ARCH_TRIPLET/pmix:
-    symlink: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/pmix
+  /usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/pmix:
+    symlink: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/pmix
   /etc/matplotlibrc:
     bind-file: $SNAP/etc/matplotlibrc
   /usr/share/matplotlib:
     symlink: $SNAP/usr/share/matplotlib
-  /usr/share/qt5:
-    symlink: $SNAP/kf5/usr/share/qt5
   /usr/bin/dot: # Graphviz for dependency graph
     symlink: $SNAP/usr/bin/dot
   /usr/bin/unflatten: # Graphviz for dependency graph
     symlink: $SNAP/usr/bin/unflatten
   /usr/share/povray-3.7: # Raytracing
     symlink: $SNAP/usr/share/povray-3.7
-    
+
 plugs:
   # this is not used or needed for anything other than to trigger automatic
   # installation of the cups snap via "default-provider: cups"
@@ -74,22 +67,15 @@ plugs:
   # Necessary to enable semaphores for numba, OpenMP etc.
   shared-memory:
     private: true
-  # QT5 libs
-  kf5-5-108-qt-5-15-10-core22:
-    content: kf5-5-108-qt-5-15-10-core22-all
-    interface: content
-    default-provider: kf5-5-108-qt-5-15-10-core22
-    target: $SNAP/kf5
 
 environment:
-  LD_LIBRARY_PATH: "$SNAP/usr/lib/:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/:$SNAP/kf5/usr/lib/$CRAFT_ARCH_TRIPLET/:$SNAP/kf5/usr/lib:/$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/blas:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/lapack:$LD_LIBRARY_PATH"
-  LD_PRELOAD: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET/libstubchown.so
+  LD_LIBRARY_PATH: "$SNAP/usr/lib/:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/:$SNAP/kf5/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/:$SNAP/kf5/usr/lib:/$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack:$LD_LIBRARY_PATH"
+  LD_PRELOAD: $SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libstubchown.so
   FREECAD_USER_HOME: $SNAP_USER_COMMON
   GIT_EXEC_PATH: $SNAP/usr/lib/git-core
   GIT_TEMPLATE_DIR: $SNAP/usr/share/git-core/templates
   GIT_CONFIG_NOSYSTEM: 1
   ELMER_HOME: $SNAP/usr
-  QTWEBENGINE_DISABLE_SANDBOX: 1
   PYTHONPYCACHEPREFIX: $SNAP_USER_COMMON/.pycache
   PYTHONUSERBASE: $SNAP_USER_COMMON/.local
   PIP_USER: 1
@@ -111,7 +97,7 @@ apps:
       - opengl
       - removable-media
       - gsettings
-      - network      
+      - network
       - browser-support
       - unity7
       - cups
@@ -166,11 +152,11 @@ parts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DPYTHON_EXECUTABLE=/usr/bin/python3
       - -DPYTHON_INCLUDE_DIR=/usr/include/python3.10
-      - -DPYTHON_LIBRARY=/usr/lib/$CRAFT_ARCH_TRIPLET/libpython3.10.so
-      - -DFREECAD_USE_EXTERNAL_ZIPIOS=ON
+      - -DPYTHON_LIBRARY=/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libpython3.10.so
       - -DFREECAD_USE_PYBIND11=ON
       - -DFREECAD_USE_QT_FILEDIALOG=ON
       - -DBUILD_FLAT_MESH=ON
+      - -DCMAKE_FIND_ROOT_PATH=$CRAFT_STAGE\;/snap/kde-qt5-core22-sdk/current\;/snap/kf5-core22-sdk/current/usr
     build-snaps:
       - freecad-rt-deps-core22
       - coin3d-realthunder
@@ -193,7 +179,6 @@ parts:
       - libx11-dev
       - libxerces-c-dev
       - libyaml-cpp-dev
-      - libzipios++-dev
       - swig
       - python3-dev
       - libvtk7-dev
@@ -202,6 +187,7 @@ parts:
       - pybind11-dev
       - libfreeimage-dev
       - openscad
+      - python3-matplotlib
     stage-packages:
       - libaec0
       - libboost-filesystem1.74.0
@@ -227,7 +213,7 @@ parts:
       - libspnav0
       - libsz2
       - libxerces-c3.2
-      - libzipios++0v5
+      - libyaml-cpp0.7
       - python3-tk # FEM
       - python3-yaml # FEM
       - python3-numba # FEM (fcFEM)
@@ -251,6 +237,7 @@ parts:
       - python3-pyside2.qtnetwork
       - python3-pyside2.qtwebenginewidgets
       - python3-pyside2.qtuitools
+      - python3-requests
       - python3-qtpy # Nodes addon
       - calculix-ccx # FEM
       - libfreeimage3
@@ -261,14 +248,17 @@ parts:
       - fcitx-frontend-qt5
       - fcitx5-frontend-qt5
     override-build: |
-      kde_sdk_dir="/snap/kf5-5-108-qt-5-15-10-core22-sdk/current"
-      mkdir -p /etc/xdg/qtchooser
-      cp "$kde_sdk_dir/etc/xdg/qtchooser/default.conf" "/etc/xdg/qtchooser/default.conf"
-      mkdir -p /workspace/usr/bin
-      ln -s /usr/bin/shiboken2 /workspace/usr/bin/shiboken2
+      # kde_sdk_dir="/snap/kf5-5-108-qt-5-15-10-core22-sdk/current"
+      # mkdir -p /etc/xdg/qtchooser
+      # cp "$kde_sdk_dir/etc/xdg/qtchooser/default.conf" "/etc/xdg/qtchooser/default.conf"
+      SHIBOKEN_BIN_PATH="/workspace/usr/bin/shiboken2"
+      if [ ! -e $SHIBOKEN_BIN_PATH ]; then
+        mkdir -p "$(dirname "${SHIBOKEN_BIN_PATH}")"
+        ln -s /usr/bin/shiboken2 $SHIBOKEN_BIN_PATH
+      fi
       craftctl default
-      if [ "$CRAFT_TARGET_ARCH" = amd64 ]; then
-        ln -sf ../libpsm1/libpsm_infinipath.so.1.16  $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET/libpsm_infinipath.so.1
+      if [ "$CRAFT_ARCH_BUILD_FOR" = amd64 ]; then
+        ln -sf ../libpsm1/libpsm_infinipath.so.1.16  $CRAFT_PART_INSTALL/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libpsm_infinipath.so.1
       fi
       cd $CRAFT_PART_SRC
       iso_date=$(date -I)
@@ -287,7 +277,7 @@ parts:
       $branding_path/install.sh $branding_path $CRAFT_PRIME/usr
       sed -i -E \
         "s|^Icon=(.*)|Icon=\${SNAP}/usr/share/icons/hicolor/scalable/apps/org.freecadweb.FreeCAD.Link.Snap.svg|g" \
-        $CRAFT_PRIME/usr/share/applications/org.freecadweb.FreeCAD.Link.Snap.desktop
+        $CRAFT_PART_INSTALL/usr/share/applications/org.freecadweb.FreeCAD.Link.Snap.desktop
       
   assembly3:
     plugin: dump
@@ -310,6 +300,8 @@ parts:
       - libcolamd2 # scikit-sparse
       - libsuitesparseconfig5 # scikit-sparse
     python-packages:
+      - ifcopenshell == 0.8.0 # BIM
+      - opencamlib # CAM
       - pip
       - scikit-sparse
     stage:
@@ -326,25 +318,33 @@ parts:
     override-build: |
       dot -c
       cp \
-        /usr/lib/${CRAFT_ARCH_TRIPLET}/graphviz/config* \
-        ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET}/graphviz/
-    organize:
-        "usr/share/doc/*" : usr/share/doc/graphviz
+        /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/graphviz/config* \
+        ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/graphviz/
 
   cleanup:
     after: [stub-chown, freecad, python-packages, assembly3, snap-setup-mod, graphviz, branding]
     plugin: nil
-    build-snaps: [kf5-5-108-qt-5-15-10-core22-sdk]
+    build-snaps: [kf5-core22]
     override-prime: |
       set -eux
-      for snap in "kf5-5-108-qt-5-15-10-core22-sdk"; do  # List all content-snaps you're using here
-        cd "/snap/$snap/current" && find . ! -name libibusplatforminputcontextplugin.so -type f,l -exec rm -f "$CRAFT_PRIME/{}" "$CRAFT_PRIME/usr/{}" \;
+      for snap in "kf5-core22"; do  # List all content-snaps you're using here
+        cd "/snap/$snap/current" && \
+        find . -type f, l \
+        -not -name libibusplatforminputcontextplugin.so \
+        -not -path "./usr/lib/python3/dist-packages/*" \
+        -not -name 'libblas.so*' \
+        -not -name 'liblapack.so*' \
+        -exec rm -f "$CRAFT_PRIME/{}" "$CRAFT_PRIME/usr/{}" \;
       done
       for cruft in bug lintian man; do
         rm -rf $CRAFT_PRIME/usr/share/$cruft
       done
-      find $CRAFT_PRIME/usr/share/doc/ -type f -not -name 'copyright' -delete
+      find $CRAFT_PRIME/usr/share/doc/ -type f -not -name 'copyright' -not -name 'ThirdPartyLibraries.html' -not -name 'LICENSE.html' -delete
       find $CRAFT_PRIME/usr/share -type d -empty -delete
       find $CRAFT_PRIME/usr/lib -type f,l \
         -name 'libQt*.so*' `# remove all Qt libs pulled in from Ubuntu repos` \
         -not -name 'libQt5Gamepad.so*' -delete `# for OpenSCAD`
+
+lint:
+  ignore:
+    - library
