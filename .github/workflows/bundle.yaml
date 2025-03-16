@@ -19,22 +19,32 @@ jobs:
         python-version: ["3.11"]
         arch : ["64"]
         include:
-          - os: windows-2019
-            python-version: "3.8"
-            arch: "64"
-          - os: ubuntu-latest
+          # - os: windows-2019
+          #   python-version: "3.8"
+          #   arch: "64"
+          - os: ubuntu-24.04-arm
             python-version: "3.11"
             arch: "aarch64"
-          - os: self-hosted-mac
-            arch: arm64
+          # - os: self-hosted-mac
+          #   arch: arm64
+          #   python-version: "3.11"
+          - os: macos-latest
             python-version: "3.11"
+            arch: arm64
 
-    uses: ./.github/workflows/builder.yaml
+    # uses: ./.github/workflows/builder.yaml
+    # with:
+    #   os: ${{ matrix.os }}
+    #   arch: ${{ matrix.arch }}
+    #   python-version: ${{ matrix.python-version }}
+    #   ref: ${{ inputs.ref }}
+    #   use_mamba: false
+    # secrets:
+    #   token: ${{ secrets.token }}
+
+    uses: ./.github/workflows/bundler.yaml
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
       python-version: ${{ matrix.python-version }}
       ref: ${{ inputs.ref }}
-      use_mamba: false
-    secrets:
-      token: ${{ secrets.token }}

@@ -67,6 +67,12 @@ plugs:
   # Necessary to enable semaphores for numba, OpenMP etc.
   shared-memory:
     private: true
+  # QT5 libs
+  kf5-5-108-qt-5-15-10-core22:
+    content: kf5-5-108-qt-5-15-10-core22-all
+    interface: content
+    default-provider: kf5-5-108-qt-5-15-10-core22
+    target: $SNAP/kf5
 
 environment:
   LD_LIBRARY_PATH: "$SNAP/usr/lib/:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/:$SNAP/kf5/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/:$SNAP/kf5/usr/lib:/$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/blas:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/lapack:$LD_LIBRARY_PATH"
@@ -76,6 +82,7 @@ environment:
   GIT_TEMPLATE_DIR: $SNAP/usr/share/git-core/templates
   GIT_CONFIG_NOSYSTEM: 1
   ELMER_HOME: $SNAP/usr
+  QTWEBENGINE_DISABLE_SANDBOX: 1
   PYTHONPYCACHEPREFIX: $SNAP_USER_COMMON/.pycache
   PYTHONUSERBASE: $SNAP_USER_COMMON/.local
   PIP_USER: 1
@@ -127,7 +134,7 @@ package-repositories:
 parts:
   stub-chown:
     plugin: meson
-    source: $CRAFT_PROJECT_DIR/snap/local/stub-chown
+    source: $CRAFT_PROJECT_DIR/local/stub-chown
     source-type: local
     build-packages:
     - meson
@@ -136,7 +143,7 @@ parts:
 
   snap-setup-mod:
     plugin: dump
-    source: $CRAFT_PROJECT_DIR/snap/local/snap-setup-mod
+    source: $CRAFT_PROJECT_DIR/local/snap-setup-mod
     source-type: local
     organize:
       "*": usr/Mod/SnapSetup/
@@ -144,7 +151,7 @@ parts:
   freecad:
     plugin: cmake
     source: https://github.com/realthunder/FreeCAD.git
-    source-branch: LinkDaily
+    source-branch: LinkMerge
     source-submodules: []
     cmake-parameters:
       - -DCMAKE_INSTALL_PREFIX=/usr
@@ -156,7 +163,9 @@ parts:
       - -DFREECAD_USE_PYBIND11=ON
       - -DFREECAD_USE_QT_FILEDIALOG=ON
       - -DBUILD_FLAT_MESH=ON
-      - -DCMAKE_FIND_ROOT_PATH=$CRAFT_STAGE\;/snap/kde-qt5-core22-sdk/current\;/snap/kf5-core22-sdk/current/usr
+      - -DBUILD_ASSEMBLY=OFF
+      - -DFREECAD_USE_FREETYPE=OFF
+      - -DCMAKE_FIND_ROOT_PATH=$CRAFT_STAGE\;/snap/core22/current\;/snap/kf5-5-108-qt-5-15-10-core22-sdk/current\;/snap/kf5-5-108-qt-5-15-10-core22-sdk/current/usr
     build-snaps:
       - freecad-rt-deps-core22
       - coin3d-realthunder
@@ -188,6 +197,7 @@ parts:
       - libfreeimage-dev
       - openscad
       - python3-matplotlib
+      - libfreetype-dev
     stage-packages:
       - libaec0
       - libboost-filesystem1.74.0
@@ -247,10 +257,11 @@ parts:
       - openscad  # OpenSCAD
       - fcitx-frontend-qt5
       - fcitx5-frontend-qt5
+      - libfreetype6
     override-build: |
-      # kde_sdk_dir="/snap/kf5-5-108-qt-5-15-10-core22-sdk/current"
-      # mkdir -p /etc/xdg/qtchooser
-      # cp "$kde_sdk_dir/etc/xdg/qtchooser/default.conf" "/etc/xdg/qtchooser/default.conf"
+      kde_sdk_dir="/snap/kf5-5-108-qt-5-15-10-core22-sdk/current"
+      mkdir -p /etc/xdg/qtchooser
+      cp "$kde_sdk_dir/etc/xdg/qtchooser/default.conf" "/etc/xdg/qtchooser/default.conf"
       SHIBOKEN_BIN_PATH="/workspace/usr/bin/shiboken2"
       if [ ! -e $SHIBOKEN_BIN_PATH ]; then
         mkdir -p "$(dirname "${SHIBOKEN_BIN_PATH}")"
@@ -320,14 +331,16 @@ parts:
       cp \
         /usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/graphviz/config* \
         ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET_BUILD_FOR}/graphviz/
+    organize:
+      usr/share/doc: usr/share/doc/graphviz-doc
 
   cleanup:
     after: [stub-chown, freecad, python-packages, assembly3, snap-setup-mod, graphviz, branding]
     plugin: nil
-    build-snaps: [kf5-core22]
+    build-snaps: [kf5-5-108-qt-5-15-10-core22-sdk]
     override-prime: |
       set -eux
-      for snap in "kf5-core22"; do  # List all content-snaps you're using here
+      for snap in "kf5-5-108-qt-5-15-10-core22-sdk"; do  # List all content-snaps you're using here
         cd "/snap/$snap/current" && \
         find . -type f, l \
         -not -name libibusplatforminputcontextplugin.so \
