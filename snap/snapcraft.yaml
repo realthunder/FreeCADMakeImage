@@ -134,7 +134,7 @@ package-repositories:
 parts:
   stub-chown:
     plugin: meson
-    source: $CRAFT_PROJECT_DIR/local/stub-chown
+    source: $CRAFT_PROJECT_DIR/snap/local/stub-chown
     source-type: local
     build-packages:
     - meson
@@ -143,7 +143,7 @@ parts:
 
   snap-setup-mod:
     plugin: dump
-    source: $CRAFT_PROJECT_DIR/local/snap-setup-mod
+    source: $CRAFT_PROJECT_DIR/snap/local/snap-setup-mod
     source-type: local
     organize:
       "*": usr/Mod/SnapSetup/
@@ -288,7 +288,7 @@ parts:
       $branding_path/install.sh $branding_path $CRAFT_PRIME/usr
       sed -i -E \
         "s|^Icon=(.*)|Icon=\${SNAP}/usr/share/icons/hicolor/scalable/apps/org.freecadweb.FreeCAD.Link.Snap.svg|g" \
-        $CRAFT_PART_INSTALL/usr/share/applications/org.freecadweb.FreeCAD.Link.Snap.desktop
+        $CRAFT_PRIME/usr/share/applications/org.freecadweb.FreeCAD.Link.Snap.desktop
       
   assembly3:
     plugin: dump
@@ -342,7 +342,7 @@ parts:
       set -eux
       for snap in "kf5-5-108-qt-5-15-10-core22-sdk"; do  # List all content-snaps you're using here
         cd "/snap/$snap/current" && \
-        find . -type f, l \
+        find . -type f,l \
         -not -name libibusplatforminputcontextplugin.so \
         -not -path "./usr/lib/python3/dist-packages/*" \
         -not -name 'libblas.so*' \
