@@ -31,7 +31,7 @@ jobs:
           submodules: true
 
       - name: Conda environment creation and activation
-        if: ${{ inputs.arch != 'aarch64' }}
+        # if: ${{ inputs.arch != 'aarch64' }}
         uses: realthunder/setup-miniconda@main
         with:
           python-version: ${{ inputs.python-version }}
@@ -43,57 +43,57 @@ jobs:
           miniforge-variant: Miniforge3
           miniforge-version: latest
 
-      - name: Make bundle for ${{ inputs.arch }}
-        if: ${{ inputs.arch == 'aarch64' }}
-        uses: realthunder/run-on-arch-action@v2
-        id: emulate
-        with:
-            distro: ubuntu_latest
-            arch: aarch64
-            githubToken: ${{ github.token }}
-            install: |
-                apt-get -q update -y
-                apt-get -q install -y file wget gnupg2 desktop-file-utils libarchive-tools appstream \
-                libglib2.0-0 git binutils coreutils fuse patchelf squashfs-tools strace util-linux zsync
-                apt-get -q clean
-                installer=Miniforge3-Linux-${{ inputs.arch }}.sh
-                wget -q https://github.com/conda-forge/miniforge/releases/latest/download/$installer
-                chmod +x $installer
-                ./$installer -b -p /opt/conda
-                rm $installer
+      # - name: Make bundle for ${{ inputs.arch }}
+      #   if: ${{ inputs.arch == 'aarch64' }}
+      #   uses: realthunder/run-on-arch-action@v2
+      #   id: emulate
+      #   with:
+      #       distro: ubuntu_latest
+      #       arch: aarch64
+      #       githubToken: ${{ github.token }}
+      #       install: |
+      #           apt-get -q update -y
+      #           apt-get -q install -y file wget gnupg2 desktop-file-utils libarchive-tools appstream \
+      #           libglib2.0-0 git binutils coreutils fuse patchelf squashfs-tools strace util-linux zsync
+      #           apt-get -q clean
+      #           installer=Miniforge3-Linux-${{ inputs.arch }}.sh
+      #           wget -q https://github.com/conda-forge/miniforge/releases/latest/download/$installer
+      #           chmod +x $installer
+      #           ./$installer -b -p /opt/conda
+      #           rm $installer
+      #
+      #           appimagetool=appimagetool-${{ inputs.arch }}.AppImage
+      #           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/$appimagetool
+      #           chmod +x $appimagetool
+      #           # Trouble running on aarch64. See https://github.com/AppImage/AppImageKit/issues/1056
+      #           sed -i 's|AI\x02|\x00\x00\x00|' $appimagetool
+      #           ./$appimagetool --appimage-extract
+      #           mv squashfs-root /opt/appimagetool
+      #           rm $appimagetool
+      #           ln -s /opt/appimagetool/AppRun /usr/local/bin/appimagetool
+      #
+      #           # # repackage for testing purpose
+      #           # rm -rf /opt/appimagetool/usr/share/metainfo
+      #           # ARCH=aarch64 appimagetool /opt/appimagetool -u 'gh-releases-zsync|realthunder|FreeCADMakeImage|latest|*.AppImage.zsync' test.AppImage
+      #           # rm -rf test.AppImage*
+      #       setup: |
+      #           mkdir -p build
+      #           chmod 777 build
+      #       run: |
+      #           source /opt/conda/etc/profile.d/conda.sh
+      #           cd ${{ github.workspace }}
+      #           export GITHUB_ENV=github_env.txt
+      #           export CONDA_CMD=conda
+      #           source conda/make-bundle.sh ${{ inputs.ref }} ${{ inputs.python-version }}
 
-                appimagetool=appimagetool-${{ inputs.arch }}.AppImage
-                wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/$appimagetool
-                chmod +x $appimagetool
-                # Trouble running on aarch64. See https://github.com/AppImage/AppImageKit/issues/1056
-                sed -i 's|AI\x02|\x00\x00\x00|' $appimagetool
-                ./$appimagetool --appimage-extract
-                mv squashfs-root /opt/appimagetool
-                rm $appimagetool
-                ln -s /opt/appimagetool/AppRun /usr/local/bin/appimagetool
-
-                # # repackage for testing purpose
-                # rm -rf /opt/appimagetool/usr/share/metainfo
-                # ARCH=aarch64 appimagetool /opt/appimagetool -u 'gh-releases-zsync|realthunder|FreeCADMakeImage|latest|*.AppImage.zsync' test.AppImage
-                # rm -rf test.AppImage*
-            setup: |
-                mkdir -p build
-                chmod 777 build
-            run: |
-                source /opt/conda/etc/profile.d/conda.sh
-                cd ${{ github.workspace }}
-                export GITHUB_ENV=github_env.txt
-                export CONDA_CMD=conda
-                source conda/make-bundle.sh ${{ inputs.ref }} ${{ inputs.python-version }}
-
-      - name: Collect env output
-        if: ${{ inputs.arch == 'aarch64' }}
-        run:
-            cat build/github_env.txt >> $GITHUB_ENV
+      # - name: Collect env output
+      #   if: ${{ inputs.arch == 'aarch64' }}
+      #   run:
+      #       cat build/github_env.txt >> $GITHUB_ENV
 
       - name: Make bundle
         id: make
-        if: ${{ inputs.arch != 'aarch64' }}
+        # if: ${{ inputs.arch != 'aarch64' }}
         shell: bash -xl {0}
         run: |
             # plain conda has hiccup on dependency solving
