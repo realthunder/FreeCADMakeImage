@@ -14,7 +14,7 @@ pkgs="python=$py calculix blas=*=openblas git gitpython \
       matplotlib numpy sympy pandas gmsh scipy six qtpy \
       pyyaml pycollada realthunder::occt \
       lxml xlutils olefile requests opencamlib \
-      blinker opencv qt.py nine docutils fmt jupyter notebook"
+      blinker opencv=*=qt5* qt.py nine docutils fmt jupyter notebook"
 
 
 arch=`uname -m`
