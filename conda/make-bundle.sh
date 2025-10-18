@@ -14,7 +14,7 @@ pkgs="python=$py calculix blas=*=openblas git gitpython \
       matplotlib numpy sympy pandas gmsh scipy six qtpy \
       pyyaml pycollada realthunder::occt pyparsing \
       lxml xlutils olefile requests opencamlib \
-      blinker opencv=*=qt5* qt.py nine docutils fmt jupyter notebook"
+      blinker noqt6 qt.py nine docutils fmt jupyter notebook"
 
 
 arch=`uname -m`
@@ -27,10 +27,6 @@ arm64)
     arch=x86_64
     ;;
 esac
-
-if [ $arch != "aarch64" && $py != "3.8" ]; then
-    pkgs="$pkgs ifcopenshell"
-fi
 
 os=`uname`
 case `uname` in
@@ -48,7 +44,7 @@ Linux*)
     #
     # pkgs="$pkgs qt-gtk-platformtheme qgnomeplatform"
     if [ $arch != aarch64 ]; then
-        pkgs="$pkgs fcitx-qt5 appimage-updater-bridge"
+        pkgs="$pkgs fcitx-qt5 appimage-updater-bridge opencv"
     fi
     ;;
 Darwin*)
@@ -61,9 +57,13 @@ Darwin*)
     exit 1
 esac
 
+if [ $os != 'MacOS' && $arch != "aarch64" && $py != "3.8" ]; then
+    pkgs="$pkgs ifcopenshell graphviz"
+fi
+
 release=
 branding=
-pkgs="$pkgs freecad-rt=*$tag"
+pkgs="$pkgs freecad-rt=$tag"
 case $tag in
 *tip)
     img_prefix="FreeCAD-Link-Tip"
@@ -104,8 +104,9 @@ if [ $os = Win ]; then
     appdir=$image_name
 fi
 
+$conda_cmd config --set channel_priority flexible
 $conda_cmd create -p $appdir $pkgs \
-    --copy -c local -c realthunder -c freecad/label/dev -c conda-forge -y
+    --copy -c realthunder -c freecad/label/dev -c conda-forge -y
 
 export FMK_WB_BASE_PATH=$appdir
 export FMK_WB_LIST="asm3"
