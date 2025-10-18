@@ -15,19 +15,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # os: [macos-latest, ubuntu-latest, windows-latest]
-        # python-version: ["3.11"]
-        # arch : ["64"]
-        # include:
-        #   - os: ubuntu-24.04-arm
-        #     python-version: "3.11"
-        #     arch: "aarch64"
-        #   - os: macos-latest
-        #     python-version: "3.11"
-        #     arch: arm64
-        os: [ubuntu-24.04-arm]
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.11"]
-        arch : ["aarch64"]
+        arch : ["64"]
+        include:
+          - os: ubuntu-24.04-arm
+            python-version: "3.11"
+            arch: "aarch64"
+          - os: macos-latest
+            python-version: "3.11"
+            arch: arm64
 
     # uses: ./.github/workflows/builder.yaml
     # with:
