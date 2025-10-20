@@ -57,8 +57,11 @@ Darwin*)
     exit 1
 esac
 
-if [ $os != 'MacOS' && $arch != "aarch64" && $py != "3.8" ]; then
-    pkgs="$pkgs ifcopenshell graphviz"
+if [ $arch != "aarch64" ] && [ $py != "3.8" ]; then
+    pkgs="$pkgs ifcopenshell"
+    if [ $os != 'MacOS' ]; then
+        pkgs="$pkgs graphviz"
+    fi
 fi
 
 release=
