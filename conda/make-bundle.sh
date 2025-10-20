@@ -4,6 +4,7 @@ set -ex
 
 tag=${1:-tip}
 py=${2:-3.10}
+redir=${3:-1}
 mkdir -p build
 cd build
 out=out
@@ -72,23 +73,29 @@ case $tag in
     img_prefix="FreeCAD-Link-Tip"
     img_postfix=${tag%tip}
     release=Tip
-    echo "RELEASE_NAME=Tip" >> $GITHUB_ENV
-    echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+    if [ $redir = 1 ]; then
+        echo "RELEASE_NAME=Tip" >> $GITHUB_ENV
+        echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+    fi
     branding=../conda/branding/asm3-daily
     ;;
 *edge)
     img_prefix="FreeCAD-Link-Edge"
     img_postfix=${tag%edge}
-    echo "RELEASE_NAME=Edge" >> $GITHUB_ENV
-    echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+    if [ $redir = 1 ]; then
+        echo "RELEASE_NAME=Edge" >> $GITHUB_ENV
+        echo "IS_PRERELEASE=true" >> $GITHUB_ENV
+    fi
     release=Edge
     branding=../conda/branding/asm3-daily
     ;;
 *stable)
     img_prefix="FreeCAD-Link-Stable"
     img_postfix=${tag%stable}
-    echo "RELEASE_NAME=$tag" >> $GITHUB_ENV
-    echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+    if [ $redir = 1 ]; then
+        echo "RELEASE_NAME=$tag" >> $GITHUB_ENV
+        echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+    fi
     branding=../conda/branding/asm3
     release=latest
     ;;
@@ -101,7 +108,9 @@ img_prefix="$img_prefix-$os-$arch-py$py-"
 image_name="$img_prefix$img_postfix"
 
 img_prefix="$img_prefix"'*'
-echo "RELEASE_ASSETS=$img_prefix" >> $GITHUB_ENV
+if [ $redir = 1 ]; then
+    echo "RELEASE_ASSETS=$img_prefix" >> $GITHUB_ENV
+fi
 
 if [ $os = Win ]; then
     appdir=$image_name
